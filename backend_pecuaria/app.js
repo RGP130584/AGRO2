@@ -319,6 +319,52 @@ app.post('/v1/sync', authenticate, async (req, res) => {
     }
 });
 
+// Gestão de Usuários e Convites (RBAC restrito a 'proprietario')
+const inviteSchema = z.object({
+    nome: z.string().min(1),
+    cpfCnpj: z.string().min(11),
+    email: z.string().email().optional().or(z.literal('')),
+    senha: z.string().min(6),
+    perfil: z.enum(['funcionario', 'proprietario']).default('funcionario')
+});
+
+app.post('/v1/users/invite', authenticate, requireRole('proprietario'), async (req, res) => {
+    try {
+        const { nome, cpfCnpj, email, senha, perfil } = inviteSchema.parse(req.body);
+        const existing = await getAsync(`SELECT id FROM usuarios WHERE cpf_cnpj = ?`, [cpfCnpj]);
+        if (existing) {
+            return res.status(400).json({ error: 'CPF/CNPJ já cadastrado.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(senha, salt);
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        await runAsync(
+            `INSERT INTO usuarios (id, nome, cpf_cnpj, email, senha_hash, perfil, token_version, criado_em) VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+            [id, nome, cpfCnpj, email || null, hash, perfil, now]
+        );
+
+        res.status(201).json({
+            message: `Usuário cadastrado com sucesso com perfil ${perfil}.`,
+            user: { id, nome, cpfCnpj, email, perfil }
+        });
+    } catch (e) {
+        if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
+        res.status(500).json({ error: 'Erro interno' });
+    }
+});
+
+app.get('/v1/users', authenticate, requireRole('proprietario'), async (req, res) => {
+    try {
+        const users = await allAsync(`SELECT id, nome, cpf_cnpj as cpfCnpj, email, perfil, criado_em as criadoEm FROM usuarios`);
+        res.json(users);
+    } catch (e) {
+        res.status(500).json({ error: 'Erro interno ao listar usuários' });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {
     app.listen(PORT, () => {

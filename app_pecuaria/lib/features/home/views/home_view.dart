@@ -8,6 +8,7 @@ import '../../nutricao/views/nutricao_view.dart';
 import '../../financeiro/views/financeiro_view.dart';
 import '../../relatorios/views/relatorios_view.dart';
 import '../../sync/views/sync_conflict_view.dart';
+import '../../auth/services/auth_service.dart';
 
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
@@ -16,11 +17,37 @@ class HomeView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final conflictsAsync = ref.watch(conflictsProvider);
     final hasConflicts = conflictsAsync.valueOrNull?.isNotEmpty ?? false;
+    final currentUser = ref.watch(authStateProvider);
+    final isProprietario = (currentUser?.perfil ?? 'proprietario') == 'proprietario';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('AGRO Pecuária'),
-        centerTitle: true,
+        centerTitle: false,
+        actions: [
+          if (currentUser != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12.0),
+              child: Chip(
+                avatar: Icon(
+                  isProprietario ? Icons.admin_panel_settings : Icons.badge_outlined,
+                  size: 16,
+                  color: isProprietario ? Colors.amber.shade900 : Colors.blue.shade900,
+                ),
+                label: Text(
+                  isProprietario ? 'Proprietário' : 'Funcionário',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isProprietario ? Colors.amber.shade900 : Colors.blue.shade900,
+                  ),
+                ),
+                backgroundColor: isProprietario ? Colors.amber.shade100 : Colors.blue.shade100,
+                side: BorderSide.none,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -30,6 +57,15 @@ class HomeView extends ConsumerWidget {
                 color: Colors.red[800],
                 child: InkWell(
                   onTap: () {
+                    if (!isProprietario) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Apenas o proprietário da fazenda pode resolver conflitos de sincronização.'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const SyncConflictView()));
                   },
                   child: const Padding(

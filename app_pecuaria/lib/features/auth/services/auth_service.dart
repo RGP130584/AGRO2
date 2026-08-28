@@ -30,9 +30,24 @@ class AuthService {
 
   AuthService(this._db, this._ref);
 
+  /// Derivação de chave lenta usando PBKDF2 com HMAC-SHA256 e 10.000 iterações
+  /// Protege contra ataques de dicionário e rainbow tables em caso de extração do banco local.
   String _hashSenha(String cpfCnpj, String senha) {
-    // Hash com salt derivado do CPF/CNPJ para proteção no SQLite local
-    return sha256.convert(utf8.encode('agro_local_salt_${cpfCnpj}_$senha')).toString();
+    final salt = utf8.encode('agro_pbkdf2_salt_${cpfCnpj}_pec');
+    final key = utf8.encode(senha);
+    final hmac = Hmac(sha256, key);
+
+    var u = hmac.convert(salt).bytes;
+    final result = List<int>.from(u);
+
+    for (int i = 1; i < 10000; i++) {
+      u = hmac.convert(u).bytes;
+      for (int j = 0; j < result.length; j++) {
+        result[j] ^= u[j];
+      }
+    }
+
+    return result.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 
   Future<void> checkSession() async {
@@ -63,6 +78,7 @@ class AuthService {
         final data = jsonDecode(response.body);
         final token = data['token'];
         final userId = data['user']['id'];
+        final perfil = data['user']['perfil'] ?? 'proprietario';
         
         await _storage.write(key: _jwtKey, value: token);
         
@@ -72,6 +88,7 @@ class AuthService {
           nome: data['user']['nome'],
           cpfCnpj: data['user']['cpfCnpj'],
           email: drift.Value(data['user']['email'] ?? ''),
+          perfil: drift.Value(perfil),
           senhaHash: hashedSenha,
           deviceId: await _ref.read(deviceIdProvider.future)
         ));
@@ -99,7 +116,13 @@ class AuthService {
     }
   }
 
-  Future<void> cadastro(String nome, String cpfCnpj, String email, String senha) async {
+  Future<void> cadastro(
+    String nome, 
+    String cpfCnpj, 
+    String email, 
+    String senha, {
+    String perfil = 'proprietario',
+  }) async {
     final hashedSenha = _hashSenha(cpfCnpj, senha);
     
     try {
@@ -111,6 +134,7 @@ class AuthService {
           'cpfCnpj': cpfCnpj,
           'email': email,
           'senha': senha,
+          'perfil': perfil,
         }),
       ).timeout(const Duration(seconds: 10));
 
@@ -127,19 +151,22 @@ class AuthService {
           nome: nome,
           cpfCnpj: cpfCnpj,
           email: drift.Value(email),
+          perfil: drift.Value(perfil),
           senhaHash: hashedSenha,
           deviceId: deviceId, 
         );
 
         await _db.into(_db.usuarios).insert(companion);
 
-        await _db.into(_db.fazendas).insert(FazendasCompanion.insert(
-          id: const Uuid().v4(),
-          nome: 'Fazenda Principal',
-          cpfCnpj: drift.Value(cpfCnpj),
-          responsavel: drift.Value(nome),
-          deviceId: deviceId,
-        ));
+        if (perfil == 'proprietario') {
+          await _db.into(_db.fazendas).insert(FazendasCompanion.insert(
+            id: const Uuid().v4(),
+            nome: 'Fazenda Principal',
+            cpfCnpj: drift.Value(cpfCnpj),
+            responsavel: drift.Value(nome),
+            deviceId: deviceId,
+          ));
+        }
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_sessionKey, userId);
