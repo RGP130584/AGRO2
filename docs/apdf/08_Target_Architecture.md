@@ -38,6 +38,13 @@ O fluxo de integração entre cliente e servidor abandona o padrão "requisiçã
 4. **Resolução de Conflitos:** Se dois gerentes alterarem o mesmo lote de animais offline e sincronizarem, a API aceita a primeira requisição. A segunda requisição recebe um *status code* de conflito (ex: 409). O app marca o registro local como `conflict` e a UI exibe ambas as versões para resolução humana.
 
 ## 4. Security Architecture (Segurança por Design)
-- **Rastreabilidade (Auditoria Extrema):** Toda tabela de negócio possui os campos: `device_id` (identificador único do hardware/instalação), `created_at`, `updated_at`, `deleted_at`.
+- **Rastreabilidade (Auditoria Extrema):** Toda tabela de negócio possui os campos: `device_id` (UUID persistente por instalação, gerado via `device_info_plus` + `uuid`), `created_at`, `updated_at`, `deleted_at`.
 - **Soft Delete:** A deleção física de registros (comando DELETE) é proibida no banco de dados. Qualquer deleção é lógica (`deleted_at`).
 - **Autenticação:** Baseada em JWT (JSON Web Tokens) com tempo de expiração prolongado, permitindo que o aplicativo abra e libere funcionalidades localmente sem necessitar renovar a sessão todos os dias.
+- **Hashing de Senhas:** Bcrypt com salt no backend. SHA-256 no cliente para fallback offline.
+- **Armazenamento Seguro:** Token JWT armazenado via `flutter_secure_storage` (Keystore Android / Keychain iOS), nunca em SharedPreferences.
+- **Proteção Anti-Brute Force:** Rate limiting (`express-rate-limit`) nos endpoints de autenticação (20 req / 15min por IP).
+- **Validação de Input:** Schemas Zod validam corpo de requisição no backend antes de qualquer processamento.
+- **Anti SQL Injection:** Whitelist estrita de tabelas e colunas no `SyncService` do Flutter para queries dinâmicas. Queries parametrizadas no backend.
+- **CORS:** Whitelist de origens configurável via variável de ambiente.
+- **Variáveis de Ambiente:** Segredos (`JWT_SECRET`, `CORS_ORIGINS`) nunca versionados; armazenados em `.env` ignorado pelo Git.

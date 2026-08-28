@@ -19,6 +19,21 @@
 - **Decisão:** Todas as entidades de negócio utilizarão UUID V4 gerados no próprio celular como `id` (chave primária).
 - **Justificativa:** Evita colisão de IDs inteiros (auto increment) quando dois dispositivos criam o mesmo tipo de registro offline ao mesmo tempo.
 
+### ADR 005: Autenticação JWT + Bcrypt
+- **Decisão:** Utilizar JSON Web Tokens (JWT) para sessões de API e Bcrypt para hashing de senhas no backend.
+- **Justificativa:** JWT permite sessões longas compatíveis com uso offline (o token é validado localmente se expirado, e renovado na próxima sync). Bcrypt com salt impede reversão de senhas mesmo em caso de vazamento do banco.
+- **Data:** 2026-08-28
+
+### ADR 006: Armazenamento Seguro de Credenciais no Cliente
+- **Decisão:** Tokens JWT e credenciais sensíveis são armazenados via `flutter_secure_storage` (Keystore no Android, Keychain no iOS), nunca em `SharedPreferences` ou texto plano.
+- **Justificativa:** SharedPreferences é armazenado em XML/plist sem criptografia, acessível em dispositivos rooteados. O Keystore/Keychain oferece criptografia nativa do SO.
+- **Data:** 2026-08-28
+
+### ADR 007: Whitelist Anti SQL Injection no SyncService
+- **Decisão:** O `SyncService` do Flutter valida `entityType` e colunas contra uma whitelist estática antes de executar queries SQL dinâmicas.
+- **Justificativa:** A natureza dinâmica do sync (recebe `entityType` e `payload` da rede) cria uma superfície de ataque para SQL injection se os valores não forem validados.
+- **Data:** 2026-08-28
+
 ## 2. Governance Rules
 *Estas regras são invioláveis e deverão ser checadas em ferramentas de análise estática e code review (ou tpm validate).*
 
@@ -26,6 +41,9 @@
 2. **Audit Trail Completo:** É proibido criar tabelas de negócio sem os campos `device_id`, `created_at`, `updated_at` e `deleted_at`.
 3. **No Hard Deletes:** A execução de um comando físico de `DELETE` em tabelas de negócio é vetada. Exclusões devem ser lógicas (`deleted_at = DATETIME('now')`).
 4. **UI Non-Blocking:** É expressamente proibido atrelar a navegação ou o *feedback* de sucesso de uma tela de formulário (ex: Salvar Vacina) a uma resposta de rede (API).
+5. **Secrets em .env:** É proibido versionar chaves de API, segredos JWT ou credenciais de banco no repositório Git. Todas as variáveis sensíveis devem estar em `.env` (ignorado pelo `.gitignore`).
+6. **Rate Limiting Obrigatório:** Toda rota pública de autenticação deve ter rate limiting configurado para prevenir ataques de força bruta.
+7. **Validação de Input no Backend:** Todo endpoint que recebe dados do cliente deve validar o corpo da requisição com schema Zod antes de processar.
 
 ## 3. Architecture Baseline Init
 *(TPM INIT: Este documento consolida a linha de base arquitetural para validações do sistema e do agente de inteligência artificial durante o ciclo de engenharia).*

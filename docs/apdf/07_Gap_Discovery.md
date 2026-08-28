@@ -1,11 +1,11 @@
 # FASE 07 — Gap Discovery
 
 ## 1. Gap Analysis (Atual vs. Target)
-*Visão do esforço total de construção, visto que o projeto não possui legado (greenfield).*
+*Visão do esforço de construção restante.*
 
-- **Estado Atual:** 0% de código. Documentação e arquitetura aprovadas.
-- **Estado Target (V1):** App Flutter multiplataforma (Android/iOS) conectado a um banco local SQLite, com motor de sincronização (*SyncService*) enviando e recebendo lotes de dados de uma API REST base.
-- **Gap de Esforço:** Implementação integral dos 10 passos técnicos definidos no Guia de Desenvolvimento, começando do esqueleto do projeto até a homologação da usabilidade de campo.
+- **Estado Atual (Atualizado 2026-08-28):** ~70% implementado. App Flutter com 7 feature modules (auth, rebanho, saúde, nutrição, estoque, sync, home), banco local Drift com 12+ tabelas, backend Express com auth JWT/Bcrypt e endpoint de sync. Segurança implementada (rate-limit, CORS, whitelist, secure storage).
+- **Estado Target (V1):** App Flutter multiplataforma (Android/iOS) conectado a um banco local SQLite, com motor de sincronização (*SyncService*) enviando e recebendo lotes de dados de uma API REST base. Homologação de usabilidade em campo.
+- **Gap Restante:** Polimento de UX (Wave 5), integração real de e-mail para recuperação de senha, testes end-to-end de sincronização sob condições adversas, e homologação com usuário leigo em campo.
 
 ## 2. Risk Analysis
 *Matriz de riscos técnicos e de negócio com estratégias de mitigação.*
