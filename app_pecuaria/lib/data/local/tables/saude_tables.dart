@@ -19,3 +19,13 @@ class AplicacoesSanitarias extends Table with SyncMixin {
   
   TextColumn get fotoPath => text().nullable()();
 }
+
+@DataClassName('OcorrenciaSanitaria')
+class OcorrenciasSanitarias extends Table with SyncMixin {
+  TextColumn get animalId => text().references(Animais, #id)();
+  TextColumn get tipo => text().withLength(min: 1, max: 50)(); // doenca, obito, acidente, outro
+  TextColumn get descricao => text()();
+  DateTimeColumn get dataOcorrencia => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get fotoPath => text().nullable()();
+}
+

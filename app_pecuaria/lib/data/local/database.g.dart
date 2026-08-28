@@ -3564,6 +3564,12 @@ class $EstoqueMovimentosTable extends EstoqueMovimentos
           type: DriftSqlType.dateTime,
           requiredDuringInsert: false,
           defaultValue: currentDateAndTime);
+  static const VerificationMeta _dataValidadeMeta =
+      const VerificationMeta('dataValidade');
+  @override
+  late final GeneratedColumn<DateTime> dataValidade = GeneratedColumn<DateTime>(
+      'data_validade', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _origemMeta = const VerificationMeta('origem');
   @override
   late final GeneratedColumn<String> origem = GeneratedColumn<String>(
@@ -3585,6 +3591,7 @@ class $EstoqueMovimentosTable extends EstoqueMovimentos
         tipo,
         quantidade,
         dataMovimento,
+        dataValidade,
         origem
       ];
   @override
@@ -3656,6 +3663,12 @@ class $EstoqueMovimentosTable extends EstoqueMovimentos
           dataMovimento.isAcceptableOrUnknown(
               data['data_movimento']!, _dataMovimentoMeta));
     }
+    if (data.containsKey('data_validade')) {
+      context.handle(
+          _dataValidadeMeta,
+          dataValidade.isAcceptableOrUnknown(
+              data['data_validade']!, _dataValidadeMeta));
+    }
     if (data.containsKey('origem')) {
       context.handle(_origemMeta,
           origem.isAcceptableOrUnknown(data['origem']!, _origemMeta));
@@ -3693,6 +3706,8 @@ class $EstoqueMovimentosTable extends EstoqueMovimentos
           .read(DriftSqlType.double, data['${effectivePrefix}quantidade'])!,
       dataMovimento: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}data_movimento'])!,
+      dataValidade: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}data_validade']),
       origem: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}origem'])!,
     );
@@ -3737,6 +3752,7 @@ class EstoqueMovimento extends DataClass
   final String tipo;
   final double quantidade;
   final DateTime dataMovimento;
+  final DateTime? dataValidade;
   final String origem;
   const EstoqueMovimento(
       {required this.id,
@@ -3750,6 +3766,7 @@ class EstoqueMovimento extends DataClass
       required this.tipo,
       required this.quantidade,
       required this.dataMovimento,
+      this.dataValidade,
       required this.origem});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3769,6 +3786,9 @@ class EstoqueMovimento extends DataClass
     map['tipo'] = Variable<String>(tipo);
     map['quantidade'] = Variable<double>(quantidade);
     map['data_movimento'] = Variable<DateTime>(dataMovimento);
+    if (!nullToAbsent || dataValidade != null) {
+      map['data_validade'] = Variable<DateTime>(dataValidade);
+    }
     map['origem'] = Variable<String>(origem);
     return map;
   }
@@ -3790,6 +3810,9 @@ class EstoqueMovimento extends DataClass
       tipo: Value(tipo),
       quantidade: Value(quantidade),
       dataMovimento: Value(dataMovimento),
+      dataValidade: dataValidade == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dataValidade),
       origem: Value(origem),
     );
   }
@@ -3809,6 +3832,7 @@ class EstoqueMovimento extends DataClass
       tipo: serializer.fromJson<String>(json['tipo']),
       quantidade: serializer.fromJson<double>(json['quantidade']),
       dataMovimento: serializer.fromJson<DateTime>(json['dataMovimento']),
+      dataValidade: serializer.fromJson<DateTime?>(json['dataValidade']),
       origem: serializer.fromJson<String>(json['origem']),
     );
   }
@@ -3827,6 +3851,7 @@ class EstoqueMovimento extends DataClass
       'tipo': serializer.toJson<String>(tipo),
       'quantidade': serializer.toJson<double>(quantidade),
       'dataMovimento': serializer.toJson<DateTime>(dataMovimento),
+      'dataValidade': serializer.toJson<DateTime?>(dataValidade),
       'origem': serializer.toJson<String>(origem),
     };
   }
@@ -3843,6 +3868,7 @@ class EstoqueMovimento extends DataClass
           String? tipo,
           double? quantidade,
           DateTime? dataMovimento,
+          Value<DateTime?> dataValidade = const Value.absent(),
           String? origem}) =>
       EstoqueMovimento(
         id: id ?? this.id,
@@ -3856,6 +3882,8 @@ class EstoqueMovimento extends DataClass
         tipo: tipo ?? this.tipo,
         quantidade: quantidade ?? this.quantidade,
         dataMovimento: dataMovimento ?? this.dataMovimento,
+        dataValidade:
+            dataValidade.present ? dataValidade.value : this.dataValidade,
         origem: origem ?? this.origem,
       );
   EstoqueMovimento copyWithCompanion(EstoqueMovimentosCompanion data) {
@@ -3875,6 +3903,9 @@ class EstoqueMovimento extends DataClass
       dataMovimento: data.dataMovimento.present
           ? data.dataMovimento.value
           : this.dataMovimento,
+      dataValidade: data.dataValidade.present
+          ? data.dataValidade.value
+          : this.dataValidade,
       origem: data.origem.present ? data.origem.value : this.origem,
     );
   }
@@ -3893,14 +3924,27 @@ class EstoqueMovimento extends DataClass
           ..write('tipo: $tipo, ')
           ..write('quantidade: $quantidade, ')
           ..write('dataMovimento: $dataMovimento, ')
+          ..write('dataValidade: $dataValidade, ')
           ..write('origem: $origem')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, serverId, syncStatus, deviceId, createdAt,
-      updatedAt, deletedAt, produtoId, tipo, quantidade, dataMovimento, origem);
+  int get hashCode => Object.hash(
+      id,
+      serverId,
+      syncStatus,
+      deviceId,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      produtoId,
+      tipo,
+      quantidade,
+      dataMovimento,
+      dataValidade,
+      origem);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3916,6 +3960,7 @@ class EstoqueMovimento extends DataClass
           other.tipo == this.tipo &&
           other.quantidade == this.quantidade &&
           other.dataMovimento == this.dataMovimento &&
+          other.dataValidade == this.dataValidade &&
           other.origem == this.origem);
 }
 
@@ -3931,6 +3976,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
   final Value<String> tipo;
   final Value<double> quantidade;
   final Value<DateTime> dataMovimento;
+  final Value<DateTime?> dataValidade;
   final Value<String> origem;
   final Value<int> rowid;
   const EstoqueMovimentosCompanion({
@@ -3945,6 +3991,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
     this.tipo = const Value.absent(),
     this.quantidade = const Value.absent(),
     this.dataMovimento = const Value.absent(),
+    this.dataValidade = const Value.absent(),
     this.origem = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3960,6 +4007,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
     required String tipo,
     required double quantidade,
     this.dataMovimento = const Value.absent(),
+    this.dataValidade = const Value.absent(),
     required String origem,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -3980,6 +4028,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
     Expression<String>? tipo,
     Expression<double>? quantidade,
     Expression<DateTime>? dataMovimento,
+    Expression<DateTime>? dataValidade,
     Expression<String>? origem,
     Expression<int>? rowid,
   }) {
@@ -3995,6 +4044,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
       if (tipo != null) 'tipo': tipo,
       if (quantidade != null) 'quantidade': quantidade,
       if (dataMovimento != null) 'data_movimento': dataMovimento,
+      if (dataValidade != null) 'data_validade': dataValidade,
       if (origem != null) 'origem': origem,
       if (rowid != null) 'rowid': rowid,
     });
@@ -4012,6 +4062,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
       Value<String>? tipo,
       Value<double>? quantidade,
       Value<DateTime>? dataMovimento,
+      Value<DateTime?>? dataValidade,
       Value<String>? origem,
       Value<int>? rowid}) {
     return EstoqueMovimentosCompanion(
@@ -4026,6 +4077,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
       tipo: tipo ?? this.tipo,
       quantidade: quantidade ?? this.quantidade,
       dataMovimento: dataMovimento ?? this.dataMovimento,
+      dataValidade: dataValidade ?? this.dataValidade,
       origem: origem ?? this.origem,
       rowid: rowid ?? this.rowid,
     );
@@ -4067,6 +4119,9 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
     if (dataMovimento.present) {
       map['data_movimento'] = Variable<DateTime>(dataMovimento.value);
     }
+    if (dataValidade.present) {
+      map['data_validade'] = Variable<DateTime>(dataValidade.value);
+    }
     if (origem.present) {
       map['origem'] = Variable<String>(origem.value);
     }
@@ -4090,6 +4145,7 @@ class EstoqueMovimentosCompanion extends UpdateCompanion<EstoqueMovimento> {
           ..write('tipo: $tipo, ')
           ..write('quantidade: $quantidade, ')
           ..write('dataMovimento: $dataMovimento, ')
+          ..write('dataValidade: $dataValidade, ')
           ..write('origem: $origem, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4881,6 +4937,629 @@ class AplicacoesSanitariasCompanion
           ..write('motivo: $motivo, ')
           ..write('dataAplicacao: $dataAplicacao, ')
           ..write('carenciaFimCalculada: $carenciaFimCalculada, ')
+          ..write('fotoPath: $fotoPath, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $OcorrenciasSanitariasTable extends OcorrenciasSanitarias
+    with TableInfo<$OcorrenciasSanitariasTable, OcorrenciaSanitaria> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OcorrenciasSanitariasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+      'server_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _deviceIdMeta =
+      const VerificationMeta('deviceId');
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+      'device_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _animalIdMeta =
+      const VerificationMeta('animalId');
+  @override
+  late final GeneratedColumn<String> animalId = GeneratedColumn<String>(
+      'animal_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+      'tipo', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 50),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _descricaoMeta =
+      const VerificationMeta('descricao');
+  @override
+  late final GeneratedColumn<String> descricao = GeneratedColumn<String>(
+      'descricao', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _dataOcorrenciaMeta =
+      const VerificationMeta('dataOcorrencia');
+  @override
+  late final GeneratedColumn<DateTime> dataOcorrencia =
+      GeneratedColumn<DateTime>('data_ocorrencia', aliasedName, false,
+          type: DriftSqlType.dateTime,
+          requiredDuringInsert: false,
+          defaultValue: currentDateAndTime);
+  static const VerificationMeta _fotoPathMeta =
+      const VerificationMeta('fotoPath');
+  @override
+  late final GeneratedColumn<String> fotoPath = GeneratedColumn<String>(
+      'foto_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        serverId,
+        syncStatus,
+        deviceId,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        animalId,
+        tipo,
+        descricao,
+        dataOcorrencia,
+        fotoPath
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ocorrencias_sanitarias';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<OcorrenciaSanitaria> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(_deviceIdMeta,
+          deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('animal_id')) {
+      context.handle(_animalIdMeta,
+          animalId.isAcceptableOrUnknown(data['animal_id']!, _animalIdMeta));
+    } else if (isInserting) {
+      context.missing(_animalIdMeta);
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+          _tipoMeta, tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta));
+    } else if (isInserting) {
+      context.missing(_tipoMeta);
+    }
+    if (data.containsKey('descricao')) {
+      context.handle(_descricaoMeta,
+          descricao.isAcceptableOrUnknown(data['descricao']!, _descricaoMeta));
+    } else if (isInserting) {
+      context.missing(_descricaoMeta);
+    }
+    if (data.containsKey('data_ocorrencia')) {
+      context.handle(
+          _dataOcorrenciaMeta,
+          dataOcorrencia.isAcceptableOrUnknown(
+              data['data_ocorrencia']!, _dataOcorrenciaMeta));
+    }
+    if (data.containsKey('foto_path')) {
+      context.handle(_fotoPathMeta,
+          fotoPath.isAcceptableOrUnknown(data['foto_path']!, _fotoPathMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  OcorrenciaSanitaria map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OcorrenciaSanitaria(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}server_id']),
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+      deviceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}device_id'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      animalId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}animal_id'])!,
+      tipo: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tipo'])!,
+      descricao: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}descricao'])!,
+      dataOcorrencia: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}data_ocorrencia'])!,
+      fotoPath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}foto_path']),
+    );
+  }
+
+  @override
+  $OcorrenciasSanitariasTable createAlias(String alias) {
+    return $OcorrenciasSanitariasTable(attachedDatabase, alias);
+  }
+}
+
+class OcorrenciaSanitaria extends DataClass
+    implements Insertable<OcorrenciaSanitaria> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
+  final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
+  final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
+  final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
+  final String deviceId;
+
+  /// Data e hora da criação original do registro.
+  final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
+  final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
+  final DateTime? deletedAt;
+  final String animalId;
+  final String tipo;
+  final String descricao;
+  final DateTime dataOcorrencia;
+  final String? fotoPath;
+  const OcorrenciaSanitaria(
+      {required this.id,
+      this.serverId,
+      required this.syncStatus,
+      required this.deviceId,
+      required this.createdAt,
+      required this.updatedAt,
+      this.deletedAt,
+      required this.animalId,
+      required this.tipo,
+      required this.descricao,
+      required this.dataOcorrencia,
+      this.fotoPath});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
+    map['device_id'] = Variable<String>(deviceId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['animal_id'] = Variable<String>(animalId);
+    map['tipo'] = Variable<String>(tipo);
+    map['descricao'] = Variable<String>(descricao);
+    map['data_ocorrencia'] = Variable<DateTime>(dataOcorrencia);
+    if (!nullToAbsent || fotoPath != null) {
+      map['foto_path'] = Variable<String>(fotoPath);
+    }
+    return map;
+  }
+
+  OcorrenciasSanitariasCompanion toCompanion(bool nullToAbsent) {
+    return OcorrenciasSanitariasCompanion(
+      id: Value(id),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncStatus: Value(syncStatus),
+      deviceId: Value(deviceId),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      animalId: Value(animalId),
+      tipo: Value(tipo),
+      descricao: Value(descricao),
+      dataOcorrencia: Value(dataOcorrencia),
+      fotoPath: fotoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoPath),
+    );
+  }
+
+  factory OcorrenciaSanitaria.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OcorrenciaSanitaria(
+      id: serializer.fromJson<String>(json['id']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      animalId: serializer.fromJson<String>(json['animalId']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      descricao: serializer.fromJson<String>(json['descricao']),
+      dataOcorrencia: serializer.fromJson<DateTime>(json['dataOcorrencia']),
+      fotoPath: serializer.fromJson<String?>(json['fotoPath']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'deviceId': serializer.toJson<String>(deviceId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'animalId': serializer.toJson<String>(animalId),
+      'tipo': serializer.toJson<String>(tipo),
+      'descricao': serializer.toJson<String>(descricao),
+      'dataOcorrencia': serializer.toJson<DateTime>(dataOcorrencia),
+      'fotoPath': serializer.toJson<String?>(fotoPath),
+    };
+  }
+
+  OcorrenciaSanitaria copyWith(
+          {String? id,
+          Value<String?> serverId = const Value.absent(),
+          String? syncStatus,
+          String? deviceId,
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          Value<DateTime?> deletedAt = const Value.absent(),
+          String? animalId,
+          String? tipo,
+          String? descricao,
+          DateTime? dataOcorrencia,
+          Value<String?> fotoPath = const Value.absent()}) =>
+      OcorrenciaSanitaria(
+        id: id ?? this.id,
+        serverId: serverId.present ? serverId.value : this.serverId,
+        syncStatus: syncStatus ?? this.syncStatus,
+        deviceId: deviceId ?? this.deviceId,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        animalId: animalId ?? this.animalId,
+        tipo: tipo ?? this.tipo,
+        descricao: descricao ?? this.descricao,
+        dataOcorrencia: dataOcorrencia ?? this.dataOcorrencia,
+        fotoPath: fotoPath.present ? fotoPath.value : this.fotoPath,
+      );
+  OcorrenciaSanitaria copyWithCompanion(OcorrenciasSanitariasCompanion data) {
+    return OcorrenciaSanitaria(
+      id: data.id.present ? data.id.value : this.id,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      animalId: data.animalId.present ? data.animalId.value : this.animalId,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      descricao: data.descricao.present ? data.descricao.value : this.descricao,
+      dataOcorrencia: data.dataOcorrencia.present
+          ? data.dataOcorrencia.value
+          : this.dataOcorrencia,
+      fotoPath: data.fotoPath.present ? data.fotoPath.value : this.fotoPath,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OcorrenciaSanitaria(')
+          ..write('id: $id, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('animalId: $animalId, ')
+          ..write('tipo: $tipo, ')
+          ..write('descricao: $descricao, ')
+          ..write('dataOcorrencia: $dataOcorrencia, ')
+          ..write('fotoPath: $fotoPath')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      serverId,
+      syncStatus,
+      deviceId,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      animalId,
+      tipo,
+      descricao,
+      dataOcorrencia,
+      fotoPath);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OcorrenciaSanitaria &&
+          other.id == this.id &&
+          other.serverId == this.serverId &&
+          other.syncStatus == this.syncStatus &&
+          other.deviceId == this.deviceId &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.animalId == this.animalId &&
+          other.tipo == this.tipo &&
+          other.descricao == this.descricao &&
+          other.dataOcorrencia == this.dataOcorrencia &&
+          other.fotoPath == this.fotoPath);
+}
+
+class OcorrenciasSanitariasCompanion
+    extends UpdateCompanion<OcorrenciaSanitaria> {
+  final Value<String> id;
+  final Value<String?> serverId;
+  final Value<String> syncStatus;
+  final Value<String> deviceId;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<String> animalId;
+  final Value<String> tipo;
+  final Value<String> descricao;
+  final Value<DateTime> dataOcorrencia;
+  final Value<String?> fotoPath;
+  final Value<int> rowid;
+  const OcorrenciasSanitariasCompanion({
+    this.id = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.animalId = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.descricao = const Value.absent(),
+    this.dataOcorrencia = const Value.absent(),
+    this.fotoPath = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OcorrenciasSanitariasCompanion.insert({
+    required String id,
+    this.serverId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    required String deviceId,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    required String animalId,
+    required String tipo,
+    required String descricao,
+    this.dataOcorrencia = const Value.absent(),
+    this.fotoPath = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        deviceId = Value(deviceId),
+        animalId = Value(animalId),
+        tipo = Value(tipo),
+        descricao = Value(descricao);
+  static Insertable<OcorrenciaSanitaria> custom({
+    Expression<String>? id,
+    Expression<String>? serverId,
+    Expression<String>? syncStatus,
+    Expression<String>? deviceId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? animalId,
+    Expression<String>? tipo,
+    Expression<String>? descricao,
+    Expression<DateTime>? dataOcorrencia,
+    Expression<String>? fotoPath,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (serverId != null) 'server_id': serverId,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (deviceId != null) 'device_id': deviceId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (animalId != null) 'animal_id': animalId,
+      if (tipo != null) 'tipo': tipo,
+      if (descricao != null) 'descricao': descricao,
+      if (dataOcorrencia != null) 'data_ocorrencia': dataOcorrencia,
+      if (fotoPath != null) 'foto_path': fotoPath,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OcorrenciasSanitariasCompanion copyWith(
+      {Value<String>? id,
+      Value<String?>? serverId,
+      Value<String>? syncStatus,
+      Value<String>? deviceId,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<DateTime?>? deletedAt,
+      Value<String>? animalId,
+      Value<String>? tipo,
+      Value<String>? descricao,
+      Value<DateTime>? dataOcorrencia,
+      Value<String?>? fotoPath,
+      Value<int>? rowid}) {
+    return OcorrenciasSanitariasCompanion(
+      id: id ?? this.id,
+      serverId: serverId ?? this.serverId,
+      syncStatus: syncStatus ?? this.syncStatus,
+      deviceId: deviceId ?? this.deviceId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      animalId: animalId ?? this.animalId,
+      tipo: tipo ?? this.tipo,
+      descricao: descricao ?? this.descricao,
+      dataOcorrencia: dataOcorrencia ?? this.dataOcorrencia,
+      fotoPath: fotoPath ?? this.fotoPath,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (animalId.present) {
+      map['animal_id'] = Variable<String>(animalId.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (descricao.present) {
+      map['descricao'] = Variable<String>(descricao.value);
+    }
+    if (dataOcorrencia.present) {
+      map['data_ocorrencia'] = Variable<DateTime>(dataOcorrencia.value);
+    }
+    if (fotoPath.present) {
+      map['foto_path'] = Variable<String>(fotoPath.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OcorrenciasSanitariasCompanion(')
+          ..write('id: $id, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('animalId: $animalId, ')
+          ..write('tipo: $tipo, ')
+          ..write('descricao: $descricao, ')
+          ..write('dataOcorrencia: $dataOcorrencia, ')
           ..write('fotoPath: $fotoPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -7794,6 +8473,759 @@ class PesagensCompanion extends UpdateCompanion<Pesagem> {
   }
 }
 
+class $LancamentosFinanceirosTable extends LancamentosFinanceiros
+    with TableInfo<$LancamentosFinanceirosTable, LancamentoFinanceiro> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LancamentosFinanceirosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+      'server_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _deviceIdMeta =
+      const VerificationMeta('deviceId');
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+      'device_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _fazendaIdMeta =
+      const VerificationMeta('fazendaId');
+  @override
+  late final GeneratedColumn<String> fazendaId = GeneratedColumn<String>(
+      'fazenda_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+      'tipo', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 20),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _descricaoMeta =
+      const VerificationMeta('descricao');
+  @override
+  late final GeneratedColumn<String> descricao = GeneratedColumn<String>(
+      'descricao', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 200),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _categoriaMeta =
+      const VerificationMeta('categoria');
+  @override
+  late final GeneratedColumn<String> categoria = GeneratedColumn<String>(
+      'categoria', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 50),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  static const VerificationMeta _valorMeta = const VerificationMeta('valor');
+  @override
+  late final GeneratedColumn<double> valor = GeneratedColumn<double>(
+      'valor', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _dataVencimentoMeta =
+      const VerificationMeta('dataVencimento');
+  @override
+  late final GeneratedColumn<DateTime> dataVencimento =
+      GeneratedColumn<DateTime>('data_vencimento', aliasedName, false,
+          type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _dataPagamentoMeta =
+      const VerificationMeta('dataPagamento');
+  @override
+  late final GeneratedColumn<DateTime> dataPagamento =
+      GeneratedColumn<DateTime>('data_pagamento', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      additionalChecks:
+          GeneratedColumn.checkTextLength(minTextLength: 1, maxTextLength: 20),
+      type: DriftSqlType.string,
+      requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        serverId,
+        syncStatus,
+        deviceId,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        fazendaId,
+        tipo,
+        descricao,
+        categoria,
+        valor,
+        dataVencimento,
+        dataPagamento,
+        status
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lancamentos_financeiros';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<LancamentoFinanceiro> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(_deviceIdMeta,
+          deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('fazenda_id')) {
+      context.handle(_fazendaIdMeta,
+          fazendaId.isAcceptableOrUnknown(data['fazenda_id']!, _fazendaIdMeta));
+    } else if (isInserting) {
+      context.missing(_fazendaIdMeta);
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+          _tipoMeta, tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta));
+    } else if (isInserting) {
+      context.missing(_tipoMeta);
+    }
+    if (data.containsKey('descricao')) {
+      context.handle(_descricaoMeta,
+          descricao.isAcceptableOrUnknown(data['descricao']!, _descricaoMeta));
+    } else if (isInserting) {
+      context.missing(_descricaoMeta);
+    }
+    if (data.containsKey('categoria')) {
+      context.handle(_categoriaMeta,
+          categoria.isAcceptableOrUnknown(data['categoria']!, _categoriaMeta));
+    } else if (isInserting) {
+      context.missing(_categoriaMeta);
+    }
+    if (data.containsKey('valor')) {
+      context.handle(
+          _valorMeta, valor.isAcceptableOrUnknown(data['valor']!, _valorMeta));
+    } else if (isInserting) {
+      context.missing(_valorMeta);
+    }
+    if (data.containsKey('data_vencimento')) {
+      context.handle(
+          _dataVencimentoMeta,
+          dataVencimento.isAcceptableOrUnknown(
+              data['data_vencimento']!, _dataVencimentoMeta));
+    } else if (isInserting) {
+      context.missing(_dataVencimentoMeta);
+    }
+    if (data.containsKey('data_pagamento')) {
+      context.handle(
+          _dataPagamentoMeta,
+          dataPagamento.isAcceptableOrUnknown(
+              data['data_pagamento']!, _dataPagamentoMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LancamentoFinanceiro map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LancamentoFinanceiro(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}server_id']),
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+      deviceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}device_id'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      fazendaId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fazenda_id'])!,
+      tipo: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tipo'])!,
+      descricao: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}descricao'])!,
+      categoria: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}categoria'])!,
+      valor: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}valor'])!,
+      dataVencimento: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}data_vencimento'])!,
+      dataPagamento: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}data_pagamento']),
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+    );
+  }
+
+  @override
+  $LancamentosFinanceirosTable createAlias(String alias) {
+    return $LancamentosFinanceirosTable(attachedDatabase, alias);
+  }
+}
+
+class LancamentoFinanceiro extends DataClass
+    implements Insertable<LancamentoFinanceiro> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
+  final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
+  final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
+  final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
+  final String deviceId;
+
+  /// Data e hora da criação original do registro.
+  final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
+  final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
+  final DateTime? deletedAt;
+  final String fazendaId;
+  final String tipo;
+  final String descricao;
+  final String categoria;
+  final double valor;
+  final DateTime dataVencimento;
+  final DateTime? dataPagamento;
+  final String status;
+  const LancamentoFinanceiro(
+      {required this.id,
+      this.serverId,
+      required this.syncStatus,
+      required this.deviceId,
+      required this.createdAt,
+      required this.updatedAt,
+      this.deletedAt,
+      required this.fazendaId,
+      required this.tipo,
+      required this.descricao,
+      required this.categoria,
+      required this.valor,
+      required this.dataVencimento,
+      this.dataPagamento,
+      required this.status});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
+    map['device_id'] = Variable<String>(deviceId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['fazenda_id'] = Variable<String>(fazendaId);
+    map['tipo'] = Variable<String>(tipo);
+    map['descricao'] = Variable<String>(descricao);
+    map['categoria'] = Variable<String>(categoria);
+    map['valor'] = Variable<double>(valor);
+    map['data_vencimento'] = Variable<DateTime>(dataVencimento);
+    if (!nullToAbsent || dataPagamento != null) {
+      map['data_pagamento'] = Variable<DateTime>(dataPagamento);
+    }
+    map['status'] = Variable<String>(status);
+    return map;
+  }
+
+  LancamentosFinanceirosCompanion toCompanion(bool nullToAbsent) {
+    return LancamentosFinanceirosCompanion(
+      id: Value(id),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncStatus: Value(syncStatus),
+      deviceId: Value(deviceId),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      fazendaId: Value(fazendaId),
+      tipo: Value(tipo),
+      descricao: Value(descricao),
+      categoria: Value(categoria),
+      valor: Value(valor),
+      dataVencimento: Value(dataVencimento),
+      dataPagamento: dataPagamento == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dataPagamento),
+      status: Value(status),
+    );
+  }
+
+  factory LancamentoFinanceiro.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LancamentoFinanceiro(
+      id: serializer.fromJson<String>(json['id']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      fazendaId: serializer.fromJson<String>(json['fazendaId']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      descricao: serializer.fromJson<String>(json['descricao']),
+      categoria: serializer.fromJson<String>(json['categoria']),
+      valor: serializer.fromJson<double>(json['valor']),
+      dataVencimento: serializer.fromJson<DateTime>(json['dataVencimento']),
+      dataPagamento: serializer.fromJson<DateTime?>(json['dataPagamento']),
+      status: serializer.fromJson<String>(json['status']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'deviceId': serializer.toJson<String>(deviceId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'fazendaId': serializer.toJson<String>(fazendaId),
+      'tipo': serializer.toJson<String>(tipo),
+      'descricao': serializer.toJson<String>(descricao),
+      'categoria': serializer.toJson<String>(categoria),
+      'valor': serializer.toJson<double>(valor),
+      'dataVencimento': serializer.toJson<DateTime>(dataVencimento),
+      'dataPagamento': serializer.toJson<DateTime?>(dataPagamento),
+      'status': serializer.toJson<String>(status),
+    };
+  }
+
+  LancamentoFinanceiro copyWith(
+          {String? id,
+          Value<String?> serverId = const Value.absent(),
+          String? syncStatus,
+          String? deviceId,
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          Value<DateTime?> deletedAt = const Value.absent(),
+          String? fazendaId,
+          String? tipo,
+          String? descricao,
+          String? categoria,
+          double? valor,
+          DateTime? dataVencimento,
+          Value<DateTime?> dataPagamento = const Value.absent(),
+          String? status}) =>
+      LancamentoFinanceiro(
+        id: id ?? this.id,
+        serverId: serverId.present ? serverId.value : this.serverId,
+        syncStatus: syncStatus ?? this.syncStatus,
+        deviceId: deviceId ?? this.deviceId,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        fazendaId: fazendaId ?? this.fazendaId,
+        tipo: tipo ?? this.tipo,
+        descricao: descricao ?? this.descricao,
+        categoria: categoria ?? this.categoria,
+        valor: valor ?? this.valor,
+        dataVencimento: dataVencimento ?? this.dataVencimento,
+        dataPagamento:
+            dataPagamento.present ? dataPagamento.value : this.dataPagamento,
+        status: status ?? this.status,
+      );
+  LancamentoFinanceiro copyWithCompanion(LancamentosFinanceirosCompanion data) {
+    return LancamentoFinanceiro(
+      id: data.id.present ? data.id.value : this.id,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      fazendaId: data.fazendaId.present ? data.fazendaId.value : this.fazendaId,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      descricao: data.descricao.present ? data.descricao.value : this.descricao,
+      categoria: data.categoria.present ? data.categoria.value : this.categoria,
+      valor: data.valor.present ? data.valor.value : this.valor,
+      dataVencimento: data.dataVencimento.present
+          ? data.dataVencimento.value
+          : this.dataVencimento,
+      dataPagamento: data.dataPagamento.present
+          ? data.dataPagamento.value
+          : this.dataPagamento,
+      status: data.status.present ? data.status.value : this.status,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LancamentoFinanceiro(')
+          ..write('id: $id, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('fazendaId: $fazendaId, ')
+          ..write('tipo: $tipo, ')
+          ..write('descricao: $descricao, ')
+          ..write('categoria: $categoria, ')
+          ..write('valor: $valor, ')
+          ..write('dataVencimento: $dataVencimento, ')
+          ..write('dataPagamento: $dataPagamento, ')
+          ..write('status: $status')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      serverId,
+      syncStatus,
+      deviceId,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      fazendaId,
+      tipo,
+      descricao,
+      categoria,
+      valor,
+      dataVencimento,
+      dataPagamento,
+      status);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LancamentoFinanceiro &&
+          other.id == this.id &&
+          other.serverId == this.serverId &&
+          other.syncStatus == this.syncStatus &&
+          other.deviceId == this.deviceId &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.fazendaId == this.fazendaId &&
+          other.tipo == this.tipo &&
+          other.descricao == this.descricao &&
+          other.categoria == this.categoria &&
+          other.valor == this.valor &&
+          other.dataVencimento == this.dataVencimento &&
+          other.dataPagamento == this.dataPagamento &&
+          other.status == this.status);
+}
+
+class LancamentosFinanceirosCompanion
+    extends UpdateCompanion<LancamentoFinanceiro> {
+  final Value<String> id;
+  final Value<String?> serverId;
+  final Value<String> syncStatus;
+  final Value<String> deviceId;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<String> fazendaId;
+  final Value<String> tipo;
+  final Value<String> descricao;
+  final Value<String> categoria;
+  final Value<double> valor;
+  final Value<DateTime> dataVencimento;
+  final Value<DateTime?> dataPagamento;
+  final Value<String> status;
+  final Value<int> rowid;
+  const LancamentosFinanceirosCompanion({
+    this.id = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.fazendaId = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.descricao = const Value.absent(),
+    this.categoria = const Value.absent(),
+    this.valor = const Value.absent(),
+    this.dataVencimento = const Value.absent(),
+    this.dataPagamento = const Value.absent(),
+    this.status = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LancamentosFinanceirosCompanion.insert({
+    required String id,
+    this.serverId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    required String deviceId,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    required String fazendaId,
+    required String tipo,
+    required String descricao,
+    required String categoria,
+    required double valor,
+    required DateTime dataVencimento,
+    this.dataPagamento = const Value.absent(),
+    required String status,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        deviceId = Value(deviceId),
+        fazendaId = Value(fazendaId),
+        tipo = Value(tipo),
+        descricao = Value(descricao),
+        categoria = Value(categoria),
+        valor = Value(valor),
+        dataVencimento = Value(dataVencimento),
+        status = Value(status);
+  static Insertable<LancamentoFinanceiro> custom({
+    Expression<String>? id,
+    Expression<String>? serverId,
+    Expression<String>? syncStatus,
+    Expression<String>? deviceId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? fazendaId,
+    Expression<String>? tipo,
+    Expression<String>? descricao,
+    Expression<String>? categoria,
+    Expression<double>? valor,
+    Expression<DateTime>? dataVencimento,
+    Expression<DateTime>? dataPagamento,
+    Expression<String>? status,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (serverId != null) 'server_id': serverId,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (deviceId != null) 'device_id': deviceId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (fazendaId != null) 'fazenda_id': fazendaId,
+      if (tipo != null) 'tipo': tipo,
+      if (descricao != null) 'descricao': descricao,
+      if (categoria != null) 'categoria': categoria,
+      if (valor != null) 'valor': valor,
+      if (dataVencimento != null) 'data_vencimento': dataVencimento,
+      if (dataPagamento != null) 'data_pagamento': dataPagamento,
+      if (status != null) 'status': status,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LancamentosFinanceirosCompanion copyWith(
+      {Value<String>? id,
+      Value<String?>? serverId,
+      Value<String>? syncStatus,
+      Value<String>? deviceId,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<DateTime?>? deletedAt,
+      Value<String>? fazendaId,
+      Value<String>? tipo,
+      Value<String>? descricao,
+      Value<String>? categoria,
+      Value<double>? valor,
+      Value<DateTime>? dataVencimento,
+      Value<DateTime?>? dataPagamento,
+      Value<String>? status,
+      Value<int>? rowid}) {
+    return LancamentosFinanceirosCompanion(
+      id: id ?? this.id,
+      serverId: serverId ?? this.serverId,
+      syncStatus: syncStatus ?? this.syncStatus,
+      deviceId: deviceId ?? this.deviceId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      fazendaId: fazendaId ?? this.fazendaId,
+      tipo: tipo ?? this.tipo,
+      descricao: descricao ?? this.descricao,
+      categoria: categoria ?? this.categoria,
+      valor: valor ?? this.valor,
+      dataVencimento: dataVencimento ?? this.dataVencimento,
+      dataPagamento: dataPagamento ?? this.dataPagamento,
+      status: status ?? this.status,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (fazendaId.present) {
+      map['fazenda_id'] = Variable<String>(fazendaId.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (descricao.present) {
+      map['descricao'] = Variable<String>(descricao.value);
+    }
+    if (categoria.present) {
+      map['categoria'] = Variable<String>(categoria.value);
+    }
+    if (valor.present) {
+      map['valor'] = Variable<double>(valor.value);
+    }
+    if (dataVencimento.present) {
+      map['data_vencimento'] = Variable<DateTime>(dataVencimento.value);
+    }
+    if (dataPagamento.present) {
+      map['data_pagamento'] = Variable<DateTime>(dataPagamento.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LancamentosFinanceirosCompanion(')
+          ..write('id: $id, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('fazendaId: $fazendaId, ')
+          ..write('tipo: $tipo, ')
+          ..write('descricao: $descricao, ')
+          ..write('categoria: $categoria, ')
+          ..write('valor: $valor, ')
+          ..write('dataVencimento: $dataVencimento, ')
+          ..write('dataPagamento: $dataPagamento, ')
+          ..write('status: $status, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7806,12 +9238,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $EstoqueMovimentosTable(this);
   late final $AplicacoesSanitariasTable aplicacoesSanitarias =
       $AplicacoesSanitariasTable(this);
+  late final $OcorrenciasSanitariasTable ocorrenciasSanitarias =
+      $OcorrenciasSanitariasTable(this);
   late final $DietasTable dietas = $DietasTable(this);
   late final $FornecimentosDietaTable fornecimentosDieta =
       $FornecimentosDietaTable(this);
   late final $SyncQueueItemsTable syncQueueItems = $SyncQueueItemsTable(this);
   late final $UsuariosTable usuarios = $UsuariosTable(this);
   late final $PesagensTable pesagens = $PesagensTable(this);
+  late final $LancamentosFinanceirosTable lancamentosFinanceiros =
+      $LancamentosFinanceirosTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7824,11 +9260,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         produtos,
         estoqueMovimentos,
         aplicacoesSanitarias,
+        ocorrenciasSanitarias,
         dietas,
         fornecimentosDieta,
         syncQueueItems,
         usuarios,
-        pesagens
+        pesagens,
+        lancamentosFinanceiros
       ];
 }
 
@@ -9342,6 +10780,7 @@ typedef $$EstoqueMovimentosTableCreateCompanionBuilder
   required String tipo,
   required double quantidade,
   Value<DateTime> dataMovimento,
+  Value<DateTime?> dataValidade,
   required String origem,
   Value<int> rowid,
 });
@@ -9358,6 +10797,7 @@ typedef $$EstoqueMovimentosTableUpdateCompanionBuilder
   Value<String> tipo,
   Value<double> quantidade,
   Value<DateTime> dataMovimento,
+  Value<DateTime?> dataValidade,
   Value<String> origem,
   Value<int> rowid,
 });
@@ -9403,6 +10843,9 @@ class $$EstoqueMovimentosTableFilterComposer
 
   ColumnFilters<DateTime> get dataMovimento => $composableBuilder(
       column: $table.dataMovimento, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get dataValidade => $composableBuilder(
+      column: $table.dataValidade, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get origem => $composableBuilder(
       column: $table.origem, builder: (column) => ColumnFilters(column));
@@ -9451,6 +10894,10 @@ class $$EstoqueMovimentosTableOrderingComposer
       column: $table.dataMovimento,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get dataValidade => $composableBuilder(
+      column: $table.dataValidade,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get origem => $composableBuilder(
       column: $table.origem, builder: (column) => ColumnOrderings(column));
 }
@@ -9497,6 +10944,9 @@ class $$EstoqueMovimentosTableAnnotationComposer
   GeneratedColumn<DateTime> get dataMovimento => $composableBuilder(
       column: $table.dataMovimento, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get dataValidade => $composableBuilder(
+      column: $table.dataValidade, builder: (column) => column);
+
   GeneratedColumn<String> get origem =>
       $composableBuilder(column: $table.origem, builder: (column) => column);
 }
@@ -9540,6 +10990,7 @@ class $$EstoqueMovimentosTableTableManager extends RootTableManager<
             Value<String> tipo = const Value.absent(),
             Value<double> quantidade = const Value.absent(),
             Value<DateTime> dataMovimento = const Value.absent(),
+            Value<DateTime?> dataValidade = const Value.absent(),
             Value<String> origem = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -9555,6 +11006,7 @@ class $$EstoqueMovimentosTableTableManager extends RootTableManager<
             tipo: tipo,
             quantidade: quantidade,
             dataMovimento: dataMovimento,
+            dataValidade: dataValidade,
             origem: origem,
             rowid: rowid,
           ),
@@ -9570,6 +11022,7 @@ class $$EstoqueMovimentosTableTableManager extends RootTableManager<
             required String tipo,
             required double quantidade,
             Value<DateTime> dataMovimento = const Value.absent(),
+            Value<DateTime?> dataValidade = const Value.absent(),
             required String origem,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -9585,6 +11038,7 @@ class $$EstoqueMovimentosTableTableManager extends RootTableManager<
             tipo: tipo,
             quantidade: quantidade,
             dataMovimento: dataMovimento,
+            dataValidade: dataValidade,
             origem: origem,
             rowid: rowid,
           ),
@@ -9956,6 +11410,293 @@ typedef $$AplicacoesSanitariasTableProcessedTableManager
               AplicacaoSanitaria>
         ),
         AplicacaoSanitaria,
+        PrefetchHooks Function()>;
+typedef $$OcorrenciasSanitariasTableCreateCompanionBuilder
+    = OcorrenciasSanitariasCompanion Function({
+  required String id,
+  Value<String?> serverId,
+  Value<String> syncStatus,
+  required String deviceId,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  required String animalId,
+  required String tipo,
+  required String descricao,
+  Value<DateTime> dataOcorrencia,
+  Value<String?> fotoPath,
+  Value<int> rowid,
+});
+typedef $$OcorrenciasSanitariasTableUpdateCompanionBuilder
+    = OcorrenciasSanitariasCompanion Function({
+  Value<String> id,
+  Value<String?> serverId,
+  Value<String> syncStatus,
+  Value<String> deviceId,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<String> animalId,
+  Value<String> tipo,
+  Value<String> descricao,
+  Value<DateTime> dataOcorrencia,
+  Value<String?> fotoPath,
+  Value<int> rowid,
+});
+
+class $$OcorrenciasSanitariasTableFilterComposer
+    extends Composer<_$AppDatabase, $OcorrenciasSanitariasTable> {
+  $$OcorrenciasSanitariasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+      column: $table.deviceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get animalId => $composableBuilder(
+      column: $table.animalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+      column: $table.tipo, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get descricao => $composableBuilder(
+      column: $table.descricao, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get dataOcorrencia => $composableBuilder(
+      column: $table.dataOcorrencia,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fotoPath => $composableBuilder(
+      column: $table.fotoPath, builder: (column) => ColumnFilters(column));
+}
+
+class $$OcorrenciasSanitariasTableOrderingComposer
+    extends Composer<_$AppDatabase, $OcorrenciasSanitariasTable> {
+  $$OcorrenciasSanitariasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+      column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get animalId => $composableBuilder(
+      column: $table.animalId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+      column: $table.tipo, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get descricao => $composableBuilder(
+      column: $table.descricao, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get dataOcorrencia => $composableBuilder(
+      column: $table.dataOcorrencia,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fotoPath => $composableBuilder(
+      column: $table.fotoPath, builder: (column) => ColumnOrderings(column));
+}
+
+class $$OcorrenciasSanitariasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OcorrenciasSanitariasTable> {
+  $$OcorrenciasSanitariasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get animalId =>
+      $composableBuilder(column: $table.animalId, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<String> get descricao =>
+      $composableBuilder(column: $table.descricao, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dataOcorrencia => $composableBuilder(
+      column: $table.dataOcorrencia, builder: (column) => column);
+
+  GeneratedColumn<String> get fotoPath =>
+      $composableBuilder(column: $table.fotoPath, builder: (column) => column);
+}
+
+class $$OcorrenciasSanitariasTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $OcorrenciasSanitariasTable,
+    OcorrenciaSanitaria,
+    $$OcorrenciasSanitariasTableFilterComposer,
+    $$OcorrenciasSanitariasTableOrderingComposer,
+    $$OcorrenciasSanitariasTableAnnotationComposer,
+    $$OcorrenciasSanitariasTableCreateCompanionBuilder,
+    $$OcorrenciasSanitariasTableUpdateCompanionBuilder,
+    (
+      OcorrenciaSanitaria,
+      BaseReferences<_$AppDatabase, $OcorrenciasSanitariasTable,
+          OcorrenciaSanitaria>
+    ),
+    OcorrenciaSanitaria,
+    PrefetchHooks Function()> {
+  $$OcorrenciasSanitariasTableTableManager(
+      _$AppDatabase db, $OcorrenciasSanitariasTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OcorrenciasSanitariasTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OcorrenciasSanitariasTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OcorrenciasSanitariasTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String?> serverId = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<String> deviceId = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String> animalId = const Value.absent(),
+            Value<String> tipo = const Value.absent(),
+            Value<String> descricao = const Value.absent(),
+            Value<DateTime> dataOcorrencia = const Value.absent(),
+            Value<String?> fotoPath = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              OcorrenciasSanitariasCompanion(
+            id: id,
+            serverId: serverId,
+            syncStatus: syncStatus,
+            deviceId: deviceId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            animalId: animalId,
+            tipo: tipo,
+            descricao: descricao,
+            dataOcorrencia: dataOcorrencia,
+            fotoPath: fotoPath,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            Value<String?> serverId = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            required String deviceId,
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            required String animalId,
+            required String tipo,
+            required String descricao,
+            Value<DateTime> dataOcorrencia = const Value.absent(),
+            Value<String?> fotoPath = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              OcorrenciasSanitariasCompanion.insert(
+            id: id,
+            serverId: serverId,
+            syncStatus: syncStatus,
+            deviceId: deviceId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            animalId: animalId,
+            tipo: tipo,
+            descricao: descricao,
+            dataOcorrencia: dataOcorrencia,
+            fotoPath: fotoPath,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$OcorrenciasSanitariasTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $OcorrenciasSanitariasTable,
+        OcorrenciaSanitaria,
+        $$OcorrenciasSanitariasTableFilterComposer,
+        $$OcorrenciasSanitariasTableOrderingComposer,
+        $$OcorrenciasSanitariasTableAnnotationComposer,
+        $$OcorrenciasSanitariasTableCreateCompanionBuilder,
+        $$OcorrenciasSanitariasTableUpdateCompanionBuilder,
+        (
+          OcorrenciaSanitaria,
+          BaseReferences<_$AppDatabase, $OcorrenciasSanitariasTable,
+              OcorrenciaSanitaria>
+        ),
+        OcorrenciaSanitaria,
         PrefetchHooks Function()>;
 typedef $$DietasTableCreateCompanionBuilder = DietasCompanion Function({
   required String id,
@@ -11268,6 +13009,339 @@ typedef $$PesagensTableProcessedTableManager = ProcessedTableManager<
     (Pesagem, BaseReferences<_$AppDatabase, $PesagensTable, Pesagem>),
     Pesagem,
     PrefetchHooks Function()>;
+typedef $$LancamentosFinanceirosTableCreateCompanionBuilder
+    = LancamentosFinanceirosCompanion Function({
+  required String id,
+  Value<String?> serverId,
+  Value<String> syncStatus,
+  required String deviceId,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  required String fazendaId,
+  required String tipo,
+  required String descricao,
+  required String categoria,
+  required double valor,
+  required DateTime dataVencimento,
+  Value<DateTime?> dataPagamento,
+  required String status,
+  Value<int> rowid,
+});
+typedef $$LancamentosFinanceirosTableUpdateCompanionBuilder
+    = LancamentosFinanceirosCompanion Function({
+  Value<String> id,
+  Value<String?> serverId,
+  Value<String> syncStatus,
+  Value<String> deviceId,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> deletedAt,
+  Value<String> fazendaId,
+  Value<String> tipo,
+  Value<String> descricao,
+  Value<String> categoria,
+  Value<double> valor,
+  Value<DateTime> dataVencimento,
+  Value<DateTime?> dataPagamento,
+  Value<String> status,
+  Value<int> rowid,
+});
+
+class $$LancamentosFinanceirosTableFilterComposer
+    extends Composer<_$AppDatabase, $LancamentosFinanceirosTable> {
+  $$LancamentosFinanceirosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+      column: $table.deviceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fazendaId => $composableBuilder(
+      column: $table.fazendaId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+      column: $table.tipo, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get descricao => $composableBuilder(
+      column: $table.descricao, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get categoria => $composableBuilder(
+      column: $table.categoria, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get valor => $composableBuilder(
+      column: $table.valor, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get dataVencimento => $composableBuilder(
+      column: $table.dataVencimento,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get dataPagamento => $composableBuilder(
+      column: $table.dataPagamento, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+}
+
+class $$LancamentosFinanceirosTableOrderingComposer
+    extends Composer<_$AppDatabase, $LancamentosFinanceirosTable> {
+  $$LancamentosFinanceirosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+      column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fazendaId => $composableBuilder(
+      column: $table.fazendaId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+      column: $table.tipo, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get descricao => $composableBuilder(
+      column: $table.descricao, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get categoria => $composableBuilder(
+      column: $table.categoria, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get valor => $composableBuilder(
+      column: $table.valor, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get dataVencimento => $composableBuilder(
+      column: $table.dataVencimento,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get dataPagamento => $composableBuilder(
+      column: $table.dataPagamento,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LancamentosFinanceirosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LancamentosFinanceirosTable> {
+  $$LancamentosFinanceirosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get fazendaId =>
+      $composableBuilder(column: $table.fazendaId, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<String> get descricao =>
+      $composableBuilder(column: $table.descricao, builder: (column) => column);
+
+  GeneratedColumn<String> get categoria =>
+      $composableBuilder(column: $table.categoria, builder: (column) => column);
+
+  GeneratedColumn<double> get valor =>
+      $composableBuilder(column: $table.valor, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dataVencimento => $composableBuilder(
+      column: $table.dataVencimento, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dataPagamento => $composableBuilder(
+      column: $table.dataPagamento, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+}
+
+class $$LancamentosFinanceirosTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LancamentosFinanceirosTable,
+    LancamentoFinanceiro,
+    $$LancamentosFinanceirosTableFilterComposer,
+    $$LancamentosFinanceirosTableOrderingComposer,
+    $$LancamentosFinanceirosTableAnnotationComposer,
+    $$LancamentosFinanceirosTableCreateCompanionBuilder,
+    $$LancamentosFinanceirosTableUpdateCompanionBuilder,
+    (
+      LancamentoFinanceiro,
+      BaseReferences<_$AppDatabase, $LancamentosFinanceirosTable,
+          LancamentoFinanceiro>
+    ),
+    LancamentoFinanceiro,
+    PrefetchHooks Function()> {
+  $$LancamentosFinanceirosTableTableManager(
+      _$AppDatabase db, $LancamentosFinanceirosTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LancamentosFinanceirosTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LancamentosFinanceirosTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LancamentosFinanceirosTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String?> serverId = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<String> deviceId = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String> fazendaId = const Value.absent(),
+            Value<String> tipo = const Value.absent(),
+            Value<String> descricao = const Value.absent(),
+            Value<String> categoria = const Value.absent(),
+            Value<double> valor = const Value.absent(),
+            Value<DateTime> dataVencimento = const Value.absent(),
+            Value<DateTime?> dataPagamento = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LancamentosFinanceirosCompanion(
+            id: id,
+            serverId: serverId,
+            syncStatus: syncStatus,
+            deviceId: deviceId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            fazendaId: fazendaId,
+            tipo: tipo,
+            descricao: descricao,
+            categoria: categoria,
+            valor: valor,
+            dataVencimento: dataVencimento,
+            dataPagamento: dataPagamento,
+            status: status,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            Value<String?> serverId = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            required String deviceId,
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            required String fazendaId,
+            required String tipo,
+            required String descricao,
+            required String categoria,
+            required double valor,
+            required DateTime dataVencimento,
+            Value<DateTime?> dataPagamento = const Value.absent(),
+            required String status,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LancamentosFinanceirosCompanion.insert(
+            id: id,
+            serverId: serverId,
+            syncStatus: syncStatus,
+            deviceId: deviceId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            fazendaId: fazendaId,
+            tipo: tipo,
+            descricao: descricao,
+            categoria: categoria,
+            valor: valor,
+            dataVencimento: dataVencimento,
+            dataPagamento: dataPagamento,
+            status: status,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LancamentosFinanceirosTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $LancamentosFinanceirosTable,
+        LancamentoFinanceiro,
+        $$LancamentosFinanceirosTableFilterComposer,
+        $$LancamentosFinanceirosTableOrderingComposer,
+        $$LancamentosFinanceirosTableAnnotationComposer,
+        $$LancamentosFinanceirosTableCreateCompanionBuilder,
+        $$LancamentosFinanceirosTableUpdateCompanionBuilder,
+        (
+          LancamentoFinanceiro,
+          BaseReferences<_$AppDatabase, $LancamentosFinanceirosTable,
+              LancamentoFinanceiro>
+        ),
+        LancamentoFinanceiro,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11286,6 +13360,8 @@ class $AppDatabaseManager {
       $$EstoqueMovimentosTableTableManager(_db, _db.estoqueMovimentos);
   $$AplicacoesSanitariasTableTableManager get aplicacoesSanitarias =>
       $$AplicacoesSanitariasTableTableManager(_db, _db.aplicacoesSanitarias);
+  $$OcorrenciasSanitariasTableTableManager get ocorrenciasSanitarias =>
+      $$OcorrenciasSanitariasTableTableManager(_db, _db.ocorrenciasSanitarias);
   $$DietasTableTableManager get dietas =>
       $$DietasTableTableManager(_db, _db.dietas);
   $$FornecimentosDietaTableTableManager get fornecimentosDieta =>
@@ -11296,4 +13372,7 @@ class $AppDatabaseManager {
       $$UsuariosTableTableManager(_db, _db.usuarios);
   $$PesagensTableTableManager get pesagens =>
       $$PesagensTableTableManager(_db, _db.pesagens);
+  $$LancamentosFinanceirosTableTableManager get lancamentosFinanceiros =>
+      $$LancamentosFinanceirosTableTableManager(
+          _db, _db.lancamentosFinanceiros);
 }

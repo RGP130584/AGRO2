@@ -5,14 +5,12 @@ import 'package:uuid/uuid.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/device_info_provider.dart';
+import '../../sync/services/sync_service.dart';
 
-/// Provider para injetar o SaudeService na aplicação.
 final saudeServiceProvider = Provider<SaudeService>((ref) {
   final db = ref.watch(databaseProvider);
-  // Usamos watch aqui para que o provider seja reconstruído se o deviceId mudar.
   final deviceId = ref.watch(deviceIdProvider).asData?.value;
 
-  // Se o deviceId ainda não estiver disponível, o serviço não pode ser criado.
   if (deviceId == null) {
     throw Exception("DeviceId não está disponível para o SaudeService");
   }
@@ -20,10 +18,6 @@ final saudeServiceProvider = Provider<SaudeService>((ref) {
   return SaudeService(db, deviceId);
 });
 
-/// Classe de serviço principal do módulo de Saúde Animal.
-/// Encapsula as complexas regras de negócio de aplicação sanitária:
-/// cálculo automático de período de carência (withdrawal period) e
-/// reflexo no módulo de estoque através da baixa do produto aplicado.
 class SaudeService {
   final AppDatabase _db;
   final String _deviceId;
@@ -31,12 +25,6 @@ class SaudeService {
 
   SaudeService(this._db, this._deviceId);
 
-  /// Registra uma aplicação sanitária para um animal ou um lote inteiro, executando
-  /// duas operações de forma atômica (dentro da mesma transação local):
-  /// 1. Salva o registro da aplicação e prevê automaticamente a [carenciaFim].
-  /// 2. Abate imediatamente a dose equivalente do estoque do [produto].
-  ///
-  /// Retorna a data calculada de fim da carência (ou null se o produto não tiver carência).
   Future<DateTime?> registrarAplicacao({
     String? animalId,
     String? loteId,
@@ -44,6 +32,7 @@ class SaudeService {
     required double dose,
     required String via,
     required String motivo,
+    String? fotoPath,
   }) async {
     final now = DateTime.now();
     DateTime? carenciaFim;
@@ -51,16 +40,126 @@ class SaudeService {
       carenciaFim = now.add(Duration(days: produto.carenciaDiasPadrao));
     }
 
+    final aplicacaoId = _uuid.v4();
+    final movimentoId = _uuid.v4();
+
     await _db.transaction(() async {
       await _db.into(_db.aplicacoesSanitarias).insert(AplicacoesSanitariasCompanion.insert(
-          id: _uuid.v4(), animalId: Value(animalId), loteId: Value(loteId), produtoId: produto.id, dose: dose, via: via, motivo: motivo,
-          dataAplicacao: Value(now), carenciaFimCalculada: Value(carenciaFim), deviceId: _deviceId));
+        id: aplicacaoId,
+        animalId: Value(animalId),
+        loteId: Value(loteId),
+        produtoId: produto.id,
+        dose: dose,
+        via: via,
+        motivo: motivo,
+        dataAplicacao: Value(now),
+        carenciaFimCalculada: Value(carenciaFim),
+        fotoPath: Value(fotoPath),
+        deviceId: _deviceId,
+      ));
 
       await _db.into(_db.estoqueMovimentos).insert(EstoqueMovimentosCompanion.insert(
-          id: _uuid.v4(), produtoId: produto.id, tipo: 'saida', quantidade: dose,
-          origem: 'aplicacao', deviceId: _deviceId));
+        id: movimentoId,
+        produtoId: produto.id,
+        tipo: 'saida',
+        quantidade: dose,
+        origem: 'aplicacao',
+        deviceId: _deviceId,
+      ));
+
+      await SyncService.enqueueSync(
+        _db,
+        'aplicacoes_sanitarias',
+        aplicacaoId,
+        'insert',
+        {
+          'animalId': animalId,
+          'loteId': loteId,
+          'produtoId': produto.id,
+          'dose': dose,
+          'via': via,
+          'motivo': motivo,
+          'dataAplicacao': now.toIso8601String(),
+          'carenciaFimCalculada': carenciaFim?.toIso8601String(),
+          'fotoPath': fotoPath
+        },
+        _deviceId,
+      );
     });
 
     return carenciaFim;
+  }
+
+  Future<void> registrarOcorrencia({
+    required String animalId,
+    required String tipo,
+    required String descricao,
+    String? fotoPath,
+  }) async {
+    final now = DateTime.now();
+    final ocorrenciaId = _uuid.v4();
+
+    final companion = OcorrenciasSanitariasCompanion.insert(
+      id: ocorrenciaId,
+      animalId: animalId,
+      tipo: tipo,
+      descricao: descricao,
+      dataOcorrencia: Value(now),
+      fotoPath: Value(fotoPath),
+      deviceId: _deviceId,
+    );
+
+    await _db.into(_db.ocorrenciasSanitarias).insert(companion);
+
+    await SyncService.enqueueSync(
+      _db,
+      'ocorrencias_sanitarias',
+      ocorrenciaId,
+      'insert',
+      {
+        'animalId': animalId,
+        'tipo': tipo,
+        'descricao': descricao,
+        'dataOcorrencia': now.toIso8601String(),
+        'fotoPath': fotoPath
+      },
+      _deviceId,
+    );
+  }
+
+  Future<DateTime?> verificarCarenciaAnimal(String animalId) async {
+    final now = DateTime.now();
+    final animal = await (_db.select(_db.animais)..where((a) => a.id.equals(animalId))).getSingleOrNull();
+    if (animal == null) return null;
+
+    final aplicacoes = await (_db.select(_db.aplicacoesSanitarias)
+          ..where((a) => a.animalId.equals(animalId) | a.loteId.equals(animal.loteId)))
+        .get();
+
+    DateTime? maxCarencia;
+    for (final app in aplicacoes) {
+      if (app.carenciaFimCalculada != null && app.carenciaFimCalculada!.isAfter(now)) {
+        if (maxCarencia == null || app.carenciaFimCalculada!.isAfter(maxCarencia)) {
+          maxCarencia = app.carenciaFimCalculada;
+        }
+      }
+    }
+    return maxCarencia;
+  }
+
+  Stream<List<TypedResult>> watchAplicacoesDetalhadas() {
+    final query = _db.select(_db.aplicacoesSanitarias).join([
+      innerJoin(_db.produtos, _db.produtos.id.equalsExp(_db.aplicacoesSanitarias.produtoId)),
+      leftOuterJoin(_db.animais, _db.animais.id.equalsExp(_db.aplicacoesSanitarias.animalId)),
+      leftOuterJoin(_db.lotes, _db.lotes.id.equalsExp(_db.aplicacoesSanitarias.loteId)),
+    ])..orderBy([OrderingTerm.desc(_db.aplicacoesSanitarias.dataAplicacao)]);
+    return query.watch();
+  }
+
+  Stream<List<TypedResult>> watchOcorrenciasDetalhadas() {
+    final query = _db.select(_db.ocorrenciasSanitarias).join([
+      innerJoin(_db.animais, _db.animais.id.equalsExp(_db.ocorrenciasSanitarias.animalId)),
+    ])..orderBy([OrderingTerm.desc(_db.ocorrenciasSanitarias.dataOcorrencia)]);
+    return query.watch();
   }
 }

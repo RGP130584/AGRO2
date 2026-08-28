@@ -40,16 +40,28 @@ class _FornecimentoFormViewState extends ConsumerState<FornecimentoFormView> {
     setState(() => _loading = true);
 
     try {
-      await ref.read(nutricaoServiceProvider).registrarFornecimento(
+      final resultado = await ref.read(nutricaoServiceProvider).registrarFornecimento(
         loteId: _loteSelecionado!,
         dietaId: _dietaSelecionada!,
         quantidadeFornecida: double.parse(_quantidadeCtrl.text),
       );
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fornecimento registrado com sucesso!'), backgroundColor: Colors.green),
-        );
+        if (resultado.isDivergente) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Atenção: Fornecimento divergente em ${resultado.divergenciaPercentual.toStringAsFixed(1)}% do planejado (${resultado.totalPlanejado.toStringAsFixed(1)} kg)!',
+              ),
+              backgroundColor: Colors.orange.shade800,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fornecimento registrado com sucesso!'), backgroundColor: Colors.green),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -8,6 +8,7 @@ import 'tables/saude_tables.dart';
 import 'tables/nutricao_tables.dart';
 import 'tables/sync_tables.dart';
 import 'tables/auth_tables.dart';
+import 'tables/financeiro_tables.dart';
 
 // O código gerado pelo Drift irá para database.g.dart (após rodar build_runner)
 part 'database.g.dart';
@@ -15,18 +16,19 @@ part 'database.g.dart';
 @DriftDatabase(tables: [
   Fazendas, Piquetes, Lotes, Animais,
   Produtos, EstoqueMovimentos,
-  AplicacoesSanitarias,
+  AplicacoesSanitarias, OcorrenciasSanitarias,
   Dietas, FornecimentosDieta,
   SyncQueueItems,
   Usuarios,
-  Pesagens
+  Pesagens,
+  LancamentosFinanceiros
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -39,6 +41,11 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(usuarios, usuarios.email);
           await m.addColumn(usuarios, usuarios.telefone);
           await m.addColumn(usuarios, usuarios.emailVerificado);
+        }
+        if (from < 3) {
+          await m.createTable(ocorrenciasSanitarias);
+          await m.createTable(lancamentosFinanceiros);
+          await m.addColumn(estoqueMovimentos, estoqueMovimentos.dataValidade);
         }
       },
       beforeOpen: (details) async {

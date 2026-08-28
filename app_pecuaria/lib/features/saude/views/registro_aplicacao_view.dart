@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/database_provider.dart';
 import '../services/saude_service.dart';
@@ -25,12 +27,30 @@ class _RegistroAplicacaoViewState extends ConsumerState<RegistroAplicacaoView> {
   String _via = 'subcutânea';
   final _motivoCtrl = TextEditingController();
   double _dose = 1.0;
+  String? _fotoPath;
   bool _loading = false;
+
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
     _motivoCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _tirarFoto() async {
+    try {
+      final XFile? foto = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+      if (foto != null) {
+        setState(() => _fotoPath = foto.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao capturar foto: $e'), backgroundColor: Colors.orange),
+        );
+      }
+    }
   }
 
   Future<void> _salvar() async {
@@ -49,6 +69,7 @@ class _RegistroAplicacaoViewState extends ConsumerState<RegistroAplicacaoView> {
         dose: _dose,
         via: _via,
         motivo: _motivoCtrl.text.trim().isEmpty ? 'Rotina' : _motivoCtrl.text.trim(),
+        fotoPath: _fotoPath,
       );
 
       if (mounted) {
@@ -244,6 +265,28 @@ class _RegistroAplicacaoViewState extends ConsumerState<RegistroAplicacaoView> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _tirarFoto,
+                      icon: const Icon(Icons.camera_alt_outlined),
+                      label: Text(_fotoPath != null ? 'FOTO ANEXADA (Toque para trocar)' : 'ANEXAR COMPROVANTE / FOTO'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    if (_fotoPath != null) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(_fotoPath!),
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

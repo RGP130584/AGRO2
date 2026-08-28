@@ -16,5 +16,6 @@ class EstoqueMovimentos extends Table with SyncMixin {
   TextColumn get tipo => text().withLength(min: 1, max: 10)(); // entrada, saida
   RealColumn get quantidade => real()();
   DateTimeColumn get dataMovimento => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get dataValidade => dateTime().nullable()();
   TextColumn get origem => text().withLength(min: 1, max: 50)(); // manual, aplicacao, dieta
 }

@@ -4,22 +4,32 @@ import '../../../data/local/database.dart';
 import '../../../providers/database_provider.dart';
 import '../../estoque/views/produto_form_view.dart';
 
-final produtosComSaldoProvider = StreamProvider<List<({Produto produto, double saldo})>>((ref) {
+final produtosComSaldoProvider = StreamProvider<List<({Produto produto, double saldo, DateTime? proximoVencimento})>>((ref) {
   final db = ref.watch(databaseProvider);
+  final now = DateTime.now();
+  final limite30Dias = now.add(const Duration(days: 30));
 
   return db.select(db.produtos).watch().asyncMap((produtos) async {
-    final result = <({Produto produto, double saldo})>[];
+    final result = <({Produto produto, double saldo, DateTime? proximoVencimento})>[];
     for (final p in produtos) {
       final movimentos = await (db.select(db.estoqueMovimentos)
             ..where((m) => m.produtoId.equals(p.id)))
           .get();
 
       double saldo = 0;
+      DateTime? proximoVencimento;
+
       for (final m in movimentos) {
         if (m.tipo == 'entrada') saldo += m.quantidade;
         if (m.tipo == 'saida') saldo -= m.quantidade;
+
+        if (m.dataValidade != null && m.dataValidade!.isAfter(now) && m.dataValidade!.isBefore(limite30Dias)) {
+          if (proximoVencimento == null || m.dataValidade!.isBefore(proximoVencimento)) {
+            proximoVencimento = m.dataValidade;
+          }
+        }
       }
-      result.add((produto: p, saldo: saldo));
+      result.add((produto: p, saldo: saldo, proximoVencimento: proximoVencimento));
     }
     return result;
   });
@@ -65,19 +75,20 @@ class ProdutosListView extends ConsumerWidget {
             itemBuilder: (context, i) {
               final p = items[i].produto;
               final saldo = items[i].saldo;
+              final vencimento = items[i].proximoVencimento;
               final estaBaixo = saldo < p.estoqueMinimo && p.estoqueMinimo > 0;
 
               return Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                color: estaBaixo ? Colors.red[50] : null,
+                color: estaBaixo ? Colors.red[50] : (vencimento != null ? Colors.orange[50] : null),
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   leading: CircleAvatar(
-                    backgroundColor: estaBaixo ? Colors.red[100] : Theme.of(context).colorScheme.primaryContainer,
+                    backgroundColor: estaBaixo ? Colors.red[100] : (vencimento != null ? Colors.orange[100] : Theme.of(context).colorScheme.primaryContainer),
                     child: Icon(
                       _iconePorTipo(p.tipo),
-                      color: estaBaixo ? Colors.red[700] : Theme.of(context).colorScheme.primary,
+                      color: estaBaixo ? Colors.red[700] : (vencimento != null ? Colors.orange[800] : Theme.of(context).colorScheme.primary),
                     ),
                   ),
                   title: Row(
@@ -105,6 +116,11 @@ class ProdutosListView extends ConsumerWidget {
                         Text(
                           'Mínimo: ${p.estoqueMinimo.toStringAsFixed(0)} ${p.unidade}',
                           style: TextStyle(color: Colors.red[700], fontSize: 12),
+                        ),
+                      if (vencimento != null)
+                        Text(
+                          '⚠️ Lote vence em: ${vencimento.day.toString().padLeft(2, '0')}/${vencimento.month.toString().padLeft(2, '0')}/${vencimento.year}',
+                          style: TextStyle(color: Colors.orange[900], fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                       if (p.carenciaDiasPadrao > 0)
                         Text('Carência: ${p.carenciaDiasPadrao} dias', style: TextStyle(color: Colors.grey[600], fontSize: 12)),

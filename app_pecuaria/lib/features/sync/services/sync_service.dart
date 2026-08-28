@@ -29,11 +29,13 @@ class SyncService extends ChangeNotifier {
     'animais': {'id', 'brinco', 'raca', 'sexo', 'dataNascimento', 'pesoNascimento', 'fazendaId', 'loteId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
     'produtos': {'id', 'nome', 'tipo', 'unidade', 'fazendaId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
     'estoque_movimentos': {'id', 'produtoId', 'quantidade', 'tipoMovimento', 'dataMovimento', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
-    'aplicacoes_sanitarias': {'id', 'animalId', 'loteId', 'produtoId', 'dose', 'dataAplicacao', 'carenciaFimCalculada', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
-    'dietas': {'id', 'nome', 'descricao', 'fazendaId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
-    'fornecimentos_dieta': {'id', 'dietaId', 'loteId', 'quantidade', 'dataFornecimento', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'aplicacoes_sanitarias': {'id', 'animalId', 'loteId', 'produtoId', 'dose', 'via', 'motivo', 'dataAplicacao', 'carenciaFimCalculada', 'fotoPath', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'ocorrencias_sanitarias': {'id', 'animalId', 'tipo', 'descricao', 'dataOcorrencia', 'fotoPath', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'dietas': {'id', 'nome', 'descricao', 'fazendaId', 'loteId', 'categoria', 'produtoId', 'quantidadePorCabecaDia', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'fornecimentos_dieta': {'id', 'dietaId', 'loteId', 'quantidadeFornecida', 'dataFornecimento', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
     'usuarios': {'id', 'nome', 'cpfCnpj', 'email', 'telefone', 'emailVerificado', 'senhaHash', 'perfil', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
-    'pesagens': {'id', 'animalId', 'peso', 'dataPesagem', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'pesagens': {'id', 'animalId', 'peso', 'dataPesagem', 'gmdCalculado', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'lancamentos_financeiros': {'id', 'fazendaId', 'tipo', 'descricao', 'categoria', 'valor', 'dataVencimento', 'dataPagamento', 'status', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
   };
 
   final AppDatabase _db;
