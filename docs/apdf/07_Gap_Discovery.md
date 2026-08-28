@@ -11,7 +11,9 @@
 *Matriz de riscos técnicos e de negócio com estratégias de mitigação.*
 
 | Risco | Tipo | Probabilidade | Impacto | Estratégia de Mitigação |
-|-------|------|---------------|---------|-------------------------|
+|---|---|---|---|---|
+| **Vazamento de Dados entre Contas (Multi-Tenancy)** | Segurança | Baixa (após Wave 2) | Crítico | Segregação estrita por `owner_id` em todas as queries no backend e suíte de testes de isolamento automatizada (`sync_isolation.test.js`). |
+| **Privacidade de Dados Pessoais (LGPD)** | Compliance | Média | Alto | Proteção de dados de CPF/CNPJ com criptografia e armazenamento de hashes. Planejar endpoint de expurgo e política de retenção para a V2. |
 | **Falha de Integridade na Sincronização** | Técnico | Média | Altíssimo | Isolamento do `SyncService`. Implementação de UUIDs gerados localmente e chaves de idempotência. Cobertura de testes simulando queda de rede no meio da transação. |
 | **Baixa Adoção por UX Ruim** | Negócio | Média | Alto | Seguir rigorosamente o *Passo 10 do Guia*: usar componentes grandes de seleção em vez de texto livre, testar contraste sob o sol, eliminar passos supérfluos da interface. |
 | **Lentidão em Consultas Locais (SQLite)** | Técnico | Baixa | Médio | Criar índices robustos no Drift (`brinco`, `lote_id`) nas tabelas de uso diário (Animais e Ocorrências) desde a primeira *migration*. |

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/device_info_provider.dart';
@@ -25,13 +26,13 @@ class AuthService {
   static const String _jwtKey = 'jwt_token';
   final _storage = const FlutterSecureStorage();
   
-  // TODO: extract to env
-  static const String _apiBaseUrl = 'http://10.0.2.2:3000/v1/auth';
+  static String get _apiBaseUrl => ApiConstants.authUrl;
 
   AuthService(this._db, this._ref);
 
-  String _hashSenha(String senha) {
-    return sha256.convert(utf8.encode(senha)).toString();
+  String _hashSenha(String cpfCnpj, String senha) {
+    // Hash com salt derivado do CPF/CNPJ para proteção no SQLite local
+    return sha256.convert(utf8.encode('agro_local_salt_${cpfCnpj}_$senha')).toString();
   }
 
   Future<void> checkSession() async {
@@ -49,7 +50,7 @@ class AuthService {
   }
 
   Future<void> login(String cpfCnpj, String senha) async {
-    final hashedSenha = _hashSenha(senha);
+    final hashedSenha = _hashSenha(cpfCnpj, senha);
     
     try {
       final response = await http.post(
@@ -99,7 +100,7 @@ class AuthService {
   }
 
   Future<void> cadastro(String nome, String cpfCnpj, String email, String senha) async {
-    final hashedSenha = _hashSenha(senha);
+    final hashedSenha = _hashSenha(cpfCnpj, senha);
     
     try {
       final response = await http.post(

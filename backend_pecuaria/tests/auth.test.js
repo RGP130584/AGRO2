@@ -1,4 +1,5 @@
-process.env.JWT_SECRET = 'test_secret';
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_secret_for_automated_testing_12345';
 const request = require('supertest');
 const app = require('../app');
 
@@ -11,8 +12,9 @@ describe('Auth Endpoints', () => {
   };
 
   it('should register a new user', async () => {
-    // Para contornar problema de cpf já existir rodando testes multiplas vezes
     testUser.cpfCnpj = Math.floor(10000000000 + Math.random() * 90000000000).toString();
+    testUser.email = `user_${testUser.cpfCnpj}@example.com`;
+    
     const res = await request(app)
       .post('/v1/auth/register')
       .send(testUser);
@@ -20,6 +22,7 @@ describe('Auth Endpoints', () => {
     expect(res.statusCode).toEqual(201);
     expect(res.body).toHaveProperty('token');
     expect(res.body.user).toHaveProperty('id');
+    expect(res.body.user.perfil).toEqual('proprietario');
   });
 
   it('should login an existing user', async () => {

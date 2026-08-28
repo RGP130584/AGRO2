@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:http/http.dart' as http;
+import '../../../core/constants/api_constants.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/database_provider.dart';
 
@@ -19,7 +20,7 @@ final syncServiceProvider = ChangeNotifierProvider<SyncService>((ref) {
 
 class SyncService extends ChangeNotifier {
   static const int maxRetries = 3;
-  static const String _apiBaseUrl = 'http://10.0.2.2:3000/v1'; 
+  static String get _syncUrl => ApiConstants.syncUrl; 
 
   static const Map<String, Set<String>> _whitelist = {
     'fazendas': {'id', 'nome', 'cpfCnpj', 'responsavel', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
@@ -87,7 +88,7 @@ class SyncService extends ChangeNotifier {
       print('SYNC: Enviando ${pendingItems.length} itens. lastSyncAt: $lastSyncAt');
 
       final response = await http.post(
-        Uri.parse('$_apiBaseUrl/sync'),
+        Uri.parse(_syncUrl),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
         body: body,
       ).timeout(const Duration(seconds: 15));
