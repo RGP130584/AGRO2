@@ -216,12 +216,32 @@ class $FazendasTable extends Fazendas with TableInfo<$FazendasTable, Fazenda> {
 }
 
 class Fazenda extends DataClass implements Insertable<Fazenda> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String nome;
   final String? cpfCnpj;
@@ -811,12 +831,32 @@ class $PiquetesTable extends Piquetes with TableInfo<$PiquetesTable, Piquete> {
 }
 
 class Piquete extends DataClass implements Insertable<Piquete> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String fazendaId;
   final String nome;
@@ -1426,12 +1466,32 @@ class $LotesTable extends Lotes with TableInfo<$LotesTable, Lote> {
 }
 
 class Lote extends DataClass implements Insertable<Lote> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String fazendaId;
   final String? piqueteId;
@@ -2142,12 +2202,32 @@ class $AnimaisTable extends Animais with TableInfo<$AnimaisTable, Animal> {
 }
 
 class Animal extends DataClass implements Insertable<Animal> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String loteId;
   final String brinco;
@@ -3000,12 +3080,32 @@ class $ProdutosTable extends Produtos with TableInfo<$ProdutosTable, Produto> {
 }
 
 class Produto extends DataClass implements Insertable<Produto> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String tipo;
   final String nome;
@@ -3606,12 +3706,32 @@ class $EstoqueMovimentosTable extends EstoqueMovimentos
 
 class EstoqueMovimento extends DataClass
     implements Insertable<EstoqueMovimento> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String produtoId;
   final String tipo;
@@ -4251,12 +4371,32 @@ class $AplicacoesSanitariasTable extends AplicacoesSanitarias
 
 class AplicacaoSanitaria extends DataClass
     implements Insertable<AplicacaoSanitaria> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String? animalId;
   final String? loteId;
@@ -4944,12 +5084,32 @@ class $DietasTable extends Dietas with TableInfo<$DietasTable, Dieta> {
 }
 
 class Dieta extends DataClass implements Insertable<Dieta> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String? loteId;
   final String? categoria;
@@ -5516,12 +5676,32 @@ class $FornecimentosDietaTable extends FornecimentosDieta
 
 class FornecimentoDieta extends DataClass
     implements Insertable<FornecimentoDieta> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String loteId;
   final String dietaId;
@@ -6065,15 +6245,37 @@ class $SyncQueueItemsTable extends SyncQueueItems
 }
 
 class SyncQueueItem extends DataClass implements Insertable<SyncQueueItem> {
+  /// ID interno incremental para ordenação rigorosa da fila.
   final int id;
+
+  /// Nome da tabela/entidade alvo da mutação (Ex: 'animais', 'produtos', 'aplicacoes_sanitarias').
   final String entityType;
+
+  /// O identificador único universal (UUID local) da entidade alterada.
   final String entityId;
+
+  /// Ação realizada localmente que deve ser refletida no servidor ('create', 'update', 'delete').
   final String action;
+
+  /// Snapshot em JSON do estado da entidade no exato momento da ação.
   final String payload;
+
+  /// Estado atual do processamento deste item da fila:
+  /// - `pending`: pronto para ser enviado.
+  /// - `processing`: em trânsito/sendo processado pelo serviço.
+  /// - `failed`: erro no envio, aguardando nova tentativa.
   final String status;
+
+  /// Timestamp exato da mutação, usado para garantir a ordem cronológica de sincronização.
   final DateTime createdAt;
+
+  /// Contador de tentativas de reenvio em caso de falha de comunicação ou erro 500 do servidor.
   final int retryCount;
+
+  /// Mensagem técnica de erro registrada na última tentativa falha de sincronização.
   final String? lastError;
+
+  /// ID único do dispositivo onde a mutação ocorreu, vital para auditoria e log.
   final String deviceId;
   const SyncQueueItem(
       {required this.id,
@@ -6450,6 +6652,27 @@ class $UsuariosTable extends Usuarios with TableInfo<$UsuariosTable, Usuario> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('proprietario'));
+  static const VerificationMeta _emailMeta = const VerificationMeta('email');
+  @override
+  late final GeneratedColumn<String> email = GeneratedColumn<String>(
+      'email', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _telefoneMeta =
+      const VerificationMeta('telefone');
+  @override
+  late final GeneratedColumn<String> telefone = GeneratedColumn<String>(
+      'telefone', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _emailVerificadoMeta =
+      const VerificationMeta('emailVerificado');
+  @override
+  late final GeneratedColumn<bool> emailVerificado = GeneratedColumn<bool>(
+      'email_verificado', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("email_verificado" IN (0, 1))'),
+      defaultValue: const Constant(false));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -6462,7 +6685,10 @@ class $UsuariosTable extends Usuarios with TableInfo<$UsuariosTable, Usuario> {
         nome,
         cpfCnpj,
         senhaHash,
-        perfil
+        perfil,
+        email,
+        telefone,
+        emailVerificado
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6529,6 +6755,20 @@ class $UsuariosTable extends Usuarios with TableInfo<$UsuariosTable, Usuario> {
       context.handle(_perfilMeta,
           perfil.isAcceptableOrUnknown(data['perfil']!, _perfilMeta));
     }
+    if (data.containsKey('email')) {
+      context.handle(
+          _emailMeta, email.isAcceptableOrUnknown(data['email']!, _emailMeta));
+    }
+    if (data.containsKey('telefone')) {
+      context.handle(_telefoneMeta,
+          telefone.isAcceptableOrUnknown(data['telefone']!, _telefoneMeta));
+    }
+    if (data.containsKey('email_verificado')) {
+      context.handle(
+          _emailVerificadoMeta,
+          emailVerificado.isAcceptableOrUnknown(
+              data['email_verificado']!, _emailVerificadoMeta));
+    }
     return context;
   }
 
@@ -6560,6 +6800,12 @@ class $UsuariosTable extends Usuarios with TableInfo<$UsuariosTable, Usuario> {
           .read(DriftSqlType.string, data['${effectivePrefix}senha_hash'])!,
       perfil: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}perfil'])!,
+      email: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}email']),
+      telefone: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}telefone']),
+      emailVerificado: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}email_verificado'])!,
     );
   }
 
@@ -6571,16 +6817,37 @@ class $UsuariosTable extends Usuarios with TableInfo<$UsuariosTable, Usuario> {
 
 class Usuario extends DataClass implements Insertable<Usuario> {
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String nome;
   final String cpfCnpj;
   final String senhaHash;
   final String perfil;
+  final String? email;
+  final String? telefone;
+  final bool emailVerificado;
   const Usuario(
       {required this.id,
       this.serverId,
@@ -6592,7 +6859,10 @@ class Usuario extends DataClass implements Insertable<Usuario> {
       required this.nome,
       required this.cpfCnpj,
       required this.senhaHash,
-      required this.perfil});
+      required this.perfil,
+      this.email,
+      this.telefone,
+      required this.emailVerificado});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -6611,6 +6881,13 @@ class Usuario extends DataClass implements Insertable<Usuario> {
     map['cpf_cnpj'] = Variable<String>(cpfCnpj);
     map['senha_hash'] = Variable<String>(senhaHash);
     map['perfil'] = Variable<String>(perfil);
+    if (!nullToAbsent || email != null) {
+      map['email'] = Variable<String>(email);
+    }
+    if (!nullToAbsent || telefone != null) {
+      map['telefone'] = Variable<String>(telefone);
+    }
+    map['email_verificado'] = Variable<bool>(emailVerificado);
     return map;
   }
 
@@ -6631,6 +6908,12 @@ class Usuario extends DataClass implements Insertable<Usuario> {
       cpfCnpj: Value(cpfCnpj),
       senhaHash: Value(senhaHash),
       perfil: Value(perfil),
+      email:
+          email == null && nullToAbsent ? const Value.absent() : Value(email),
+      telefone: telefone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(telefone),
+      emailVerificado: Value(emailVerificado),
     );
   }
 
@@ -6649,6 +6932,9 @@ class Usuario extends DataClass implements Insertable<Usuario> {
       cpfCnpj: serializer.fromJson<String>(json['cpfCnpj']),
       senhaHash: serializer.fromJson<String>(json['senhaHash']),
       perfil: serializer.fromJson<String>(json['perfil']),
+      email: serializer.fromJson<String?>(json['email']),
+      telefone: serializer.fromJson<String?>(json['telefone']),
+      emailVerificado: serializer.fromJson<bool>(json['emailVerificado']),
     );
   }
   @override
@@ -6666,6 +6952,9 @@ class Usuario extends DataClass implements Insertable<Usuario> {
       'cpfCnpj': serializer.toJson<String>(cpfCnpj),
       'senhaHash': serializer.toJson<String>(senhaHash),
       'perfil': serializer.toJson<String>(perfil),
+      'email': serializer.toJson<String?>(email),
+      'telefone': serializer.toJson<String?>(telefone),
+      'emailVerificado': serializer.toJson<bool>(emailVerificado),
     };
   }
 
@@ -6680,7 +6969,10 @@ class Usuario extends DataClass implements Insertable<Usuario> {
           String? nome,
           String? cpfCnpj,
           String? senhaHash,
-          String? perfil}) =>
+          String? perfil,
+          Value<String?> email = const Value.absent(),
+          Value<String?> telefone = const Value.absent(),
+          bool? emailVerificado}) =>
       Usuario(
         id: id ?? this.id,
         serverId: serverId.present ? serverId.value : this.serverId,
@@ -6693,6 +6985,9 @@ class Usuario extends DataClass implements Insertable<Usuario> {
         cpfCnpj: cpfCnpj ?? this.cpfCnpj,
         senhaHash: senhaHash ?? this.senhaHash,
         perfil: perfil ?? this.perfil,
+        email: email.present ? email.value : this.email,
+        telefone: telefone.present ? telefone.value : this.telefone,
+        emailVerificado: emailVerificado ?? this.emailVerificado,
       );
   Usuario copyWithCompanion(UsuariosCompanion data) {
     return Usuario(
@@ -6708,6 +7003,11 @@ class Usuario extends DataClass implements Insertable<Usuario> {
       cpfCnpj: data.cpfCnpj.present ? data.cpfCnpj.value : this.cpfCnpj,
       senhaHash: data.senhaHash.present ? data.senhaHash.value : this.senhaHash,
       perfil: data.perfil.present ? data.perfil.value : this.perfil,
+      email: data.email.present ? data.email.value : this.email,
+      telefone: data.telefone.present ? data.telefone.value : this.telefone,
+      emailVerificado: data.emailVerificado.present
+          ? data.emailVerificado.value
+          : this.emailVerificado,
     );
   }
 
@@ -6724,14 +7024,30 @@ class Usuario extends DataClass implements Insertable<Usuario> {
           ..write('nome: $nome, ')
           ..write('cpfCnpj: $cpfCnpj, ')
           ..write('senhaHash: $senhaHash, ')
-          ..write('perfil: $perfil')
+          ..write('perfil: $perfil, ')
+          ..write('email: $email, ')
+          ..write('telefone: $telefone, ')
+          ..write('emailVerificado: $emailVerificado')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, serverId, syncStatus, deviceId, createdAt,
-      updatedAt, deletedAt, nome, cpfCnpj, senhaHash, perfil);
+  int get hashCode => Object.hash(
+      id,
+      serverId,
+      syncStatus,
+      deviceId,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      nome,
+      cpfCnpj,
+      senhaHash,
+      perfil,
+      email,
+      telefone,
+      emailVerificado);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6746,7 +7062,10 @@ class Usuario extends DataClass implements Insertable<Usuario> {
           other.nome == this.nome &&
           other.cpfCnpj == this.cpfCnpj &&
           other.senhaHash == this.senhaHash &&
-          other.perfil == this.perfil);
+          other.perfil == this.perfil &&
+          other.email == this.email &&
+          other.telefone == this.telefone &&
+          other.emailVerificado == this.emailVerificado);
 }
 
 class UsuariosCompanion extends UpdateCompanion<Usuario> {
@@ -6761,6 +7080,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
   final Value<String> cpfCnpj;
   final Value<String> senhaHash;
   final Value<String> perfil;
+  final Value<String?> email;
+  final Value<String?> telefone;
+  final Value<bool> emailVerificado;
   final Value<int> rowid;
   const UsuariosCompanion({
     this.id = const Value.absent(),
@@ -6774,6 +7096,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
     this.cpfCnpj = const Value.absent(),
     this.senhaHash = const Value.absent(),
     this.perfil = const Value.absent(),
+    this.email = const Value.absent(),
+    this.telefone = const Value.absent(),
+    this.emailVerificado = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UsuariosCompanion.insert({
@@ -6788,6 +7113,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
     required String cpfCnpj,
     required String senhaHash,
     this.perfil = const Value.absent(),
+    this.email = const Value.absent(),
+    this.telefone = const Value.absent(),
+    this.emailVerificado = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         deviceId = Value(deviceId),
@@ -6806,6 +7134,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
     Expression<String>? cpfCnpj,
     Expression<String>? senhaHash,
     Expression<String>? perfil,
+    Expression<String>? email,
+    Expression<String>? telefone,
+    Expression<bool>? emailVerificado,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6820,6 +7151,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
       if (cpfCnpj != null) 'cpf_cnpj': cpfCnpj,
       if (senhaHash != null) 'senha_hash': senhaHash,
       if (perfil != null) 'perfil': perfil,
+      if (email != null) 'email': email,
+      if (telefone != null) 'telefone': telefone,
+      if (emailVerificado != null) 'email_verificado': emailVerificado,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6836,6 +7170,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
       Value<String>? cpfCnpj,
       Value<String>? senhaHash,
       Value<String>? perfil,
+      Value<String?>? email,
+      Value<String?>? telefone,
+      Value<bool>? emailVerificado,
       Value<int>? rowid}) {
     return UsuariosCompanion(
       id: id ?? this.id,
@@ -6849,6 +7186,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
       cpfCnpj: cpfCnpj ?? this.cpfCnpj,
       senhaHash: senhaHash ?? this.senhaHash,
       perfil: perfil ?? this.perfil,
+      email: email ?? this.email,
+      telefone: telefone ?? this.telefone,
+      emailVerificado: emailVerificado ?? this.emailVerificado,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6889,6 +7229,15 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
     if (perfil.present) {
       map['perfil'] = Variable<String>(perfil.value);
     }
+    if (email.present) {
+      map['email'] = Variable<String>(email.value);
+    }
+    if (telefone.present) {
+      map['telefone'] = Variable<String>(telefone.value);
+    }
+    if (emailVerificado.present) {
+      map['email_verificado'] = Variable<bool>(emailVerificado.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6909,6 +7258,9 @@ class UsuariosCompanion extends UpdateCompanion<Usuario> {
           ..write('cpfCnpj: $cpfCnpj, ')
           ..write('senhaHash: $senhaHash, ')
           ..write('perfil: $perfil, ')
+          ..write('email: $email, ')
+          ..write('telefone: $telefone, ')
+          ..write('emailVerificado: $emailVerificado, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7099,12 +7451,32 @@ class $PesagensTable extends Pesagens with TableInfo<$PesagensTable, Pesagem> {
 }
 
 class Pesagem extends DataClass implements Insertable<Pesagem> {
+  /// Identificador único universal (UUID V4) gerado localmente.
+  /// Funciona como chave de idempotência e identificador principal.
   final String id;
+
+  /// Identificador gerado pelo servidor após a sincronização bem-sucedida.
+  /// Fica nulo enquanto o registro existir apenas no dispositivo local.
   final String? serverId;
+
+  /// Status atual da sincronização do registro:
+  /// - `pending`: aguardando envio para o servidor
+  /// - `synced`: sincronizado com sucesso
+  /// - `conflict`: ocorreu um conflito de versão que precisa de resolução
   final String syncStatus;
+
+  /// Identificador único do dispositivo que criou ou modificou este registro.
+  /// Usado para auditoria e resolução de conflitos.
   final String deviceId;
+
+  /// Data e hora da criação original do registro.
   final DateTime createdAt;
+
+  /// Data e hora da última modificação do registro.
   final DateTime updatedAt;
+
+  /// Data e hora da exclusão lógica (soft delete). Se preenchido, o registro
+  /// é considerado apagado, mas é mantido no banco para sincronizar a exclusão.
   final DateTime? deletedAt;
   final String animalId;
   final double peso;
@@ -10366,6 +10738,9 @@ typedef $$UsuariosTableCreateCompanionBuilder = UsuariosCompanion Function({
   required String cpfCnpj,
   required String senhaHash,
   Value<String> perfil,
+  Value<String?> email,
+  Value<String?> telefone,
+  Value<bool> emailVerificado,
   Value<int> rowid,
 });
 typedef $$UsuariosTableUpdateCompanionBuilder = UsuariosCompanion Function({
@@ -10380,6 +10755,9 @@ typedef $$UsuariosTableUpdateCompanionBuilder = UsuariosCompanion Function({
   Value<String> cpfCnpj,
   Value<String> senhaHash,
   Value<String> perfil,
+  Value<String?> email,
+  Value<String?> telefone,
+  Value<bool> emailVerificado,
   Value<int> rowid,
 });
 
@@ -10424,6 +10802,16 @@ class $$UsuariosTableFilterComposer
 
   ColumnFilters<String> get perfil => $composableBuilder(
       column: $table.perfil, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get email => $composableBuilder(
+      column: $table.email, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get telefone => $composableBuilder(
+      column: $table.telefone, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get emailVerificado => $composableBuilder(
+      column: $table.emailVerificado,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$UsuariosTableOrderingComposer
@@ -10467,6 +10855,16 @@ class $$UsuariosTableOrderingComposer
 
   ColumnOrderings<String> get perfil => $composableBuilder(
       column: $table.perfil, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get email => $composableBuilder(
+      column: $table.email, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get telefone => $composableBuilder(
+      column: $table.telefone, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get emailVerificado => $composableBuilder(
+      column: $table.emailVerificado,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$UsuariosTableAnnotationComposer
@@ -10510,6 +10908,15 @@ class $$UsuariosTableAnnotationComposer
 
   GeneratedColumn<String> get perfil =>
       $composableBuilder(column: $table.perfil, builder: (column) => column);
+
+  GeneratedColumn<String> get email =>
+      $composableBuilder(column: $table.email, builder: (column) => column);
+
+  GeneratedColumn<String> get telefone =>
+      $composableBuilder(column: $table.telefone, builder: (column) => column);
+
+  GeneratedColumn<bool> get emailVerificado => $composableBuilder(
+      column: $table.emailVerificado, builder: (column) => column);
 }
 
 class $$UsuariosTableTableManager extends RootTableManager<
@@ -10546,6 +10953,9 @@ class $$UsuariosTableTableManager extends RootTableManager<
             Value<String> cpfCnpj = const Value.absent(),
             Value<String> senhaHash = const Value.absent(),
             Value<String> perfil = const Value.absent(),
+            Value<String?> email = const Value.absent(),
+            Value<String?> telefone = const Value.absent(),
+            Value<bool> emailVerificado = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               UsuariosCompanion(
@@ -10560,6 +10970,9 @@ class $$UsuariosTableTableManager extends RootTableManager<
             cpfCnpj: cpfCnpj,
             senhaHash: senhaHash,
             perfil: perfil,
+            email: email,
+            telefone: telefone,
+            emailVerificado: emailVerificado,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -10574,6 +10987,9 @@ class $$UsuariosTableTableManager extends RootTableManager<
             required String cpfCnpj,
             required String senhaHash,
             Value<String> perfil = const Value.absent(),
+            Value<String?> email = const Value.absent(),
+            Value<String?> telefone = const Value.absent(),
+            Value<bool> emailVerificado = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               UsuariosCompanion.insert(
@@ -10588,6 +11004,9 @@ class $$UsuariosTableTableManager extends RootTableManager<
             cpfCnpj: cpfCnpj,
             senhaHash: senhaHash,
             perfil: perfil,
+            email: email,
+            telefone: telefone,
+            emailVerificado: emailVerificado,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

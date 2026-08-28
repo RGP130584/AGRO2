@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:http/http.dart' as http;
 import '../../../data/local/database.dart';
@@ -16,26 +17,32 @@ final syncServiceProvider = ChangeNotifierProvider<SyncService>((ref) {
   return SyncService(db);
 });
 
-/// Serviço central responsável pela sincronização offline-first bidirecional.
-/// Ele executa o ciclo completo de sincronização:
-/// 1. Envio (Push): processa a fila local de eventos (Outbox) pendentes e envia em lote.
-/// 2. Recebimento (Pull): obtém alterações do servidor baseadas no último timestamp (lastSyncAt) 
-///    e aplica de forma idempotente, gerindo resolução de conflitos (mantendo local se houver disputa).
 class SyncService extends ChangeNotifier {
   static const int maxRetries = 3;
-  // TODO: Mover para variáveis de ambiente
-  static const String _apiBaseUrl = 'http://10.0.2.2:3000/v1'; // 10.0.2.2 para emulador Android rodando servidor localhost
+  static const String _apiBaseUrl = 'http://10.0.2.2:3000/v1'; 
+
+  static const Map<String, Set<String>> _whitelist = {
+    'fazendas': {'id', 'nome', 'cpfCnpj', 'responsavel', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'piquetes': {'id', 'nome', 'capacidade', 'fazendaId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'lotes': {'id', 'nome', 'descricao', 'fazendaId', 'piqueteId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'animais': {'id', 'brinco', 'raca', 'sexo', 'dataNascimento', 'pesoNascimento', 'fazendaId', 'loteId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'produtos': {'id', 'nome', 'tipo', 'unidade', 'fazendaId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'estoque_movimentos': {'id', 'produtoId', 'quantidade', 'tipoMovimento', 'dataMovimento', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'aplicacoes_sanitarias': {'id', 'animalId', 'loteId', 'produtoId', 'dose', 'dataAplicacao', 'carenciaFimCalculada', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'dietas': {'id', 'nome', 'descricao', 'fazendaId', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'fornecimentos_dieta': {'id', 'dietaId', 'loteId', 'quantidade', 'dataFornecimento', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'usuarios': {'id', 'nome', 'cpfCnpj', 'email', 'telefone', 'emailVerificado', 'senhaHash', 'perfil', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+    'pesagens': {'id', 'animalId', 'peso', 'dataPesagem', 'deviceId', 'sync_status', 'server_id', 'created_at', 'updated_at', 'deleted_at'},
+  };
 
   final AppDatabase _db;
+  final _storage = const FlutterSecureStorage();
   bool _isProcessing = false;
 
   bool get isProcessing => _isProcessing;
 
   SyncService(this._db);
 
-  /// Processa a fila de sincronização enviando as operações pendentes e recebendo novas atualizações.
-  /// Evita concorrência disparando o processamento apenas se não houver um em andamento.
-  /// Requer conectividade com a rede.
   Future<void> processQueue() async {
     if (_isProcessing) return;
 
@@ -44,11 +51,16 @@ class SyncService extends ChangeNotifier {
       return; 
     }
 
+    final token = await _storage.read(key: 'jwt_token');
+    if (token == null) {
+      print('SYNC: Falha - Usuário não autenticado no backend.');
+      return;
+    }
+
     _isProcessing = true;
     notifyListeners();
 
     try {
-      // 1. Coletar todos os eventos pendentes/falhados
       final pendingItems = await (_db.select(_db.syncQueueItems)
             ..where((t) =>
                 t.status.isIn(['pending', 'failed']) &
@@ -56,7 +68,6 @@ class SyncService extends ChangeNotifier {
             ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
           .get();
 
-      // Pegar lastSyncAt do SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final lastSyncAt = prefs.getString('lastSyncAt') ?? "1970-01-01T00:00:00.000Z";
 
@@ -77,14 +88,13 @@ class SyncService extends ChangeNotifier {
 
       final response = await http.post(
         Uri.parse('$_apiBaseUrl/sync'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer SEU_TOKEN_JWT'},
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
         body: body,
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         
-        // 2. Processar os resultados do Outbox (Sync ou Conflito)
         final results = data['results'] as List<dynamic>? ?? [];
         for (final res in results) {
           final queueId = res['id'] as int;
@@ -104,7 +114,6 @@ class SyncService extends ChangeNotifier {
           }
         }
 
-        // 3. Processar as alterações vindas do servidor (Pull)
         final changes = data['changes'] as List<dynamic>? ?? [];
         for (final change in changes) {
           final entityType = change['entityType'] as String;
@@ -112,11 +121,9 @@ class SyncService extends ChangeNotifier {
           final serverId = change['serverId'] as String;
           final isDeleted = change['deletedAt'] != null;
 
-          // Sobrescreve localmente com a versão do servidor
           await _applyRemoteChange(entityType, payload, serverId, isDeleted);
         }
 
-        // Atualizar lastSyncAt
         if (data['serverTime'] != null) {
           await prefs.setString('lastSyncAt', data['serverTime']);
         }
@@ -135,11 +142,6 @@ class SyncService extends ChangeNotifier {
     }
   }
 
-  /// Enfileira uma mutação (create, update ou delete) no Outbox para ser sincronizada de 
-  /// forma assíncrona assim que houver internet.
-  /// 
-  /// É fundamental que isso ocorra na mesma transação local do banco de dados 
-  /// (através de comandos atômicos ou dependência procedural rigorosa).
   static Future<void> enqueueSync(AppDatabase db, String entityType, String entityId, String action, Map<String, dynamic> payload, String deviceId) async {
     await db.into(db.syncQueueItems).insert(SyncQueueItemsCompanion.insert(
       entityType: entityType,
@@ -150,37 +152,49 @@ class SyncService extends ChangeNotifier {
     ));
   }
 
-  // Helper para atualizar o status da entidade local após retorno do servidor
   Future<void> _updateEntitySyncStatus(String entityType, String entityId, String syncStatus, String? serverId) async {
+    if (!_whitelist.containsKey(entityType)) {
+      print('SYNC ERROR: Tentativa de atualizar entidade não permitida: $entityType');
+      return;
+    }
     final query = 'UPDATE $entityType SET sync_status = ?, server_id = ? WHERE id = ?';
     await _db.customStatement(query, [syncStatus, serverId, entityId]);
   }
 
-  // Helper para aplicar mudança do servidor usando SQL puro devido ao dinamismo
   Future<void> _applyRemoteChange(String entityType, Map<String, dynamic> payload, String serverId, bool isDeleted) async {
+    if (!_whitelist.containsKey(entityType)) {
+      print('SYNC ERROR: Entidade ignorada por segurança (não permitida): $entityType');
+      return;
+    }
+
     final entityId = payload['id'] as String;
     payload['sync_status'] = 'synced';
     payload['server_id'] = serverId;
-    
-    // Verificar se existe localmente
+
+    // Filter payload keys to only allowed columns for this table
+    final allowed = _whitelist[entityType]!;
+    final keys = payload.keys.toList().where((k) {
+      if (!allowed.contains(k)) {
+        print('SYNC WARN: Coluna $k ignorada por segurança em $entityType.');
+        return false;
+      }
+      return true;
+    }).toList();
+
     final rs = await _db.customSelect('SELECT id FROM $entityType WHERE id = ?', variables: [Variable.withString(entityId)]).get();
     
     if (rs.isNotEmpty) {
       if (isDeleted) {
         await _db.customStatement('UPDATE $entityType SET deleted_at = ? WHERE id = ?', [DateTime.now().toIso8601String(), entityId]);
       } else {
-        // Build UPDATE query
-        final keys = payload.keys.toList();
         final setClause = keys.map((k) => '$k = ?').join(', ');
         final values = keys.map((k) => payload[k]).toList();
-        values.add(entityId); // for WHERE id = ?
+        values.add(entityId); 
         
         await _db.customStatement('UPDATE $entityType SET $setClause WHERE id = ?', values);
       }
     } else {
       if (!isDeleted) {
-        // Build INSERT query
-        final keys = payload.keys.toList();
         final cols = keys.join(', ');
         final placeholders = keys.map((_) => '?').join(', ');
         final values = keys.map((k) => payload[k]).toList();

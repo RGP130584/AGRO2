@@ -4,6 +4,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../services/auth_service.dart';
 import '../../home/views/home_view.dart';
 import 'cadastro_view.dart';
+import 'forgot_password_view.dart';
 
 class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
@@ -156,7 +157,16 @@ class _LoginViewState extends ConsumerState<LoginView> {
                     ),
                     validator: (v) => v == null || v.isEmpty ? 'Informe a senha' : null,
                   ),
-                  const SizedBox(height: 40),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordView()));
+                      },
+                      child: const Text('Esqueci minha senha'),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   
                   FilledButton(
                     onPressed: _loading ? null : _fazerLogin,

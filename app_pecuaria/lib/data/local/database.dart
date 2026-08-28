@@ -26,13 +26,20 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          await m.addColumn(usuarios, usuarios.email);
+          await m.addColumn(usuarios, usuarios.telefone);
+          await m.addColumn(usuarios, usuarios.emailVerificado);
+        }
       },
       beforeOpen: (details) async {
         // PRAGMA foreign_keys não é suportado no WASM (web)

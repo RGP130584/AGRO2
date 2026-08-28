@@ -15,6 +15,7 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
   final _formKey = GlobalKey<FormState>();
   final _nomeCtrl = TextEditingController();
   final _cpfCnpjCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _senhaCtrl = TextEditingController();
   bool _loading = false;
   bool _obscureText = true;
@@ -29,6 +30,7 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
   void dispose() {
     _nomeCtrl.dispose();
     _cpfCnpjCtrl.dispose();
+    _emailCtrl.dispose();
     _senhaCtrl.dispose();
     super.dispose();
   }
@@ -69,6 +71,7 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
       await ref.read(authServiceProvider).cadastro(
         _nomeCtrl.text.trim(),
         unmaskedCpfCnpj,
+        _emailCtrl.text.trim(),
         _senhaCtrl.text,
       );
       if (mounted) {
@@ -138,6 +141,23 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
                     if (len != 11 && len != 14) {
                       return 'Informe um CPF ou CNPJ válido';
                     }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'E-mail',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    filled: true,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Informe seu e-mail';
+                    if (!v.contains('@') || !v.contains('.')) return 'E-mail inválido';
                     return null;
                   },
                 ),

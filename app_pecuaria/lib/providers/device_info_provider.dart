@@ -3,25 +3,41 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
-/// Fornece um identificador único do dispositivo para fins de auditoria.
-/// Conforme a regra de governança "Audit Trail Completo".
+/// Fornece um identificador único do dispositivo persistente por instalação.
 final deviceIdProvider = FutureProvider<String>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  const key = 'device_id_uuid';
+  
+  if (prefs.containsKey(key)) {
+    return prefs.getString(key)!;
+  }
+
+  // Gera um UUID único para a instalação
+  String generatedId = const Uuid().v4();
   final deviceInfo = DeviceInfoPlugin();
+  
   try {
     if (kIsWeb) {
       final webInfo = await deviceInfo.webBrowserInfo;
-      return webInfo.vendor ?? webInfo.userAgent ?? 'web_device';
+      generatedId = 'web_${webInfo.vendor}_$generatedId';
     } else if (Platform.isAndroid) {
       final androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.id; // Um ID único para a instalação do app no Android
+      generatedId = 'android_${androidInfo.model}_$generatedId';
     } else if (Platform.isIOS) {
       final iosInfo = await deviceInfo.iosInfo;
-      return iosInfo.identifierForVendor ?? 'ios_device';
+      generatedId = 'ios_${iosInfo.identifierForVendor}_$generatedId';
     }
   } catch (e) {
-    // Em caso de erro, retorna um fallback para não quebrar a operação.
-    return 'unknown_device_error';
+    // Falha em pegar info do device_info_plus, usa só o UUID
+    generatedId = 'unknown_$generatedId';
   }
-  return 'unknown_platform';
+
+  // Limpa espaços ou caracteres inválidos por segurança
+  generatedId = generatedId.replaceAll(RegExp(r'\s+'), '_');
+
+  await prefs.setString(key, generatedId);
+  return generatedId;
 });
