@@ -1,0 +1,29 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Flutter/Dart
+.dart_tool/
+build/
+.packages
+.pub-cache/
+.pub/
+*.iml
+*.log
+
+# Bancos de Dados locais
+*.db
+*.sqlite
+*.sqlite-journal
+
+# Env
+.env
+.env.*
+!.env.example
+
+# IDEs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
