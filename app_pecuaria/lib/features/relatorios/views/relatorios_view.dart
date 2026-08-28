@@ -1,215 +1,239 @@
-import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
-import '../../../data/local/database.dart';
-import '../../../providers/database_provider.dart';
 import '../../rebanho/views/fazenda_list_view.dart';
-import '../../estoque/views/produtos_list_view.dart';
+import 'relatorio_rebanho_view.dart';
+import 'relatorio_gmd_view.dart';
+import 'relatorio_saude_view.dart';
+import 'relatorio_nutricao_view.dart';
+import 'relatorio_estoque_view.dart';
+import 'relatorio_financeiro_view.dart';
+import 'sync_status_view.dart';
+import '../services/relatorio_rebanho_service.dart';
 
-class RelatoriosView extends ConsumerStatefulWidget {
+class RelatoriosView extends ConsumerWidget {
   const RelatoriosView({super.key});
 
   @override
-  ConsumerState<RelatoriosView> createState() => _RelatoriosViewState();
-}
-
-class _RelatoriosViewState extends ConsumerState<RelatoriosView> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String? _animalSelecionadoId;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final fazendasAsync = ref.watch(fazendasProvider);
+    final carenciaCountAsync = ref.watch(_carenciaCountProvider);
 
-    return fazendasAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Erro: $e'))),
-      data: (fazendas) {
-        if (fazendas.isEmpty) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Relatórios Gerenciais')),
-            body: const Center(child: Text('Cadastre uma fazenda para visualizar relatórios.')),
-          );
-        }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Relatórios Gerenciais'),
+        centerTitle: true,
+      ),
+      body: fazendasAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Erro: $e')),
+        data: (fazendas) {
+          final fazendaId = fazendas.isNotEmpty ? fazendas.first.id : null;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Relatórios e Desempenho'),
-            bottom: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabs: const [
-                Tab(icon: Icon(Icons.show_chart), text: 'Desempenho (GMD)'),
-                Tab(icon: Icon(Icons.health_and_safety_outlined), text: 'Rastreabilidade Sanitária'),
-                Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Posição de Estoque'),
-              ],
-            ),
-          ),
-          body: TabBarView(
-            controller: _tabController,
+          return ListView(
+            padding: const EdgeInsets.all(20),
             children: [
-              _buildGmdReport(),
-              _buildRastreabilidadeReport(),
-              _buildEstoqueReport(),
+              // Badge de carência no topo
+              carenciaCountAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (count) => count > 0
+                    ? _buildAlertBanner(
+                        context,
+                        '🚨 $count animal${count > 1 ? 'is' : ''} em período de carência',
+                        Colors.red.shade800,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => RelatorioSaudeView(fazendaId: fazendaId)),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+
+              Text('Rebanho e Desempenho', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCategoryCard(
+                      context,
+                      icon: Icons.groups_outlined,
+                      label: 'Efetivo e\nComposição',
+                      color: Colors.brown.shade700,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RelatorioRebanhoView(fazendaId: fazendaId))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildCategoryCard(
+                      context,
+                      icon: Icons.show_chart,
+                      label: 'GMD e\nCrescimento',
+                      color: Colors.teal.shade700,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RelatorioGmdView(fazendaId: fazendaId))),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              Text('Saúde e Nutrição', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCategoryCard(
+                      context,
+                      icon: Icons.health_and_safety_outlined,
+                      label: 'Saúde\nAnimal',
+                      color: Colors.red.shade700,
+                      badge: carenciaCountAsync.valueOrNull,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RelatorioSaudeView(fazendaId: fazendaId))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildCategoryCard(
+                      context,
+                      icon: Icons.restaurant_menu_outlined,
+                      label: 'Nutrição\ne Dietas',
+                      color: Colors.orange.shade700,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RelatorioNutricaoView(fazendaId: fazendaId))),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              Text('Estoque e Financeiro', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCategoryCard(
+                      context,
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Estoque\ne Kardex',
+                      color: Colors.blueGrey.shade700,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RelatorioEstoqueView(fazendaId: fazendaId))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildCategoryCard(
+                      context,
+                      icon: Icons.account_balance_wallet_outlined,
+                      label: 'Financeiro',
+                      color: Colors.indigo.shade700,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RelatorioFinanceiroView(fazendaId: fazendaId))),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              Text('Sistema', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _buildCategoryCard(
+                context,
+                icon: Icons.sync_outlined,
+                label: 'Status de Sincronização',
+                color: Colors.purple.shade700,
+                fullWidth: true,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SyncStatusView())),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAlertBanner(BuildContext context, String text, Color color, VoidCallback onTap) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+              const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildGmdReport() {
-    final db = ref.watch(databaseProvider);
-    final dateFormat = DateFormat('dd/MM/yyyy');
-
-    final query = db.select(db.pesagens).join([
-      drift.innerJoin(db.animais, db.animais.id.equalsExp(db.pesagens.animalId)),
-    ])..orderBy([drift.OrderingTerm.desc(db.pesagens.dataPesagem)]);
-
-    return StreamBuilder<List<drift.TypedResult>>(
-      stream: query.watch(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final rows = snapshot.data ?? [];
-        if (rows.isEmpty) {
-          return const Center(child: Text('Nenhum registro de pesagem cadastrado.'));
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: rows.length,
-          itemBuilder: (context, index) {
-            final row = rows[index];
-            final p = row.readTable(db.pesagens);
-            final a = row.readTable(db.animais);
-
-            return Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.blueGrey,
-                  child: Icon(Icons.scale, color: Colors.white),
-                ),
-                title: Text('Brinco ${a.brinco}: ${p.peso.toStringAsFixed(1)} kg', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('Data: ${dateFormat.format(p.dataPesagem)} • Raça: ${a.raca}'),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildRastreabilidadeReport() {
-    final db = ref.watch(databaseProvider);
-    final dateFormat = DateFormat('dd/MM/yyyy');
-
-    return StreamBuilder<List<Animal>>(
-      stream: (db.select(db.animais)..where((a) => a.deletedAt.isNull())).watch(),
-      builder: (context, snapshot) {
-        final animais = snapshot.data ?? [];
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: DropdownButtonFormField<String>(
-                value: _animalSelecionadoId,
-                decoration: InputDecoration(
-                  labelText: 'Selecione o Animal (Brinco)',
-                  prefixIcon: const Icon(Icons.pets),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                items: animais.map((a) => DropdownMenuItem(value: a.id, child: Text('Brinco ${a.brinco} (${a.raca})'))).toList(),
-                onChanged: (v) => setState(() => _animalSelecionadoId = v),
-              ),
-            ),
-            if (_animalSelecionadoId == null)
-              const Expanded(child: Center(child: Text('Selecione um animal para ver o histórico sanitário.')))
-            else
-              Expanded(
-                child: StreamBuilder<List<AplicacaoSanitaria>>(
-                  stream: (db.select(db.aplicacoesSanitarias)..where((a) => a.animalId.equals(_animalSelecionadoId!))).watch(),
-                  builder: (context, snapApp) {
-                    final aplicacoes = snapApp.data ?? [];
-                    if (aplicacoes.isEmpty) {
-                      return const Center(child: Text('Nenhuma aplicação sanitária registrada para este animal.'));
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: aplicacoes.length,
-                      itemBuilder: (context, i) {
-                        final item = aplicacoes[i];
-                        return Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          child: ListTile(
-                            leading: const Icon(Icons.vaccines, color: Colors.teal),
-                            title: Text('Aplicação em ${dateFormat.format(item.dataAplicacao)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('Dose: ${item.dose} • Via: ${item.via}\nMotivo: ${item.motivo}'),
-                            isThreeLine: true,
+  Widget _buildCategoryCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    int? badge,
+    bool fullWidth = false,
+  }) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: color,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: fullWidth
+              ? Row(
+                  children: [
+                    Icon(icon, size: 36, color: Colors.white),
+                    const SizedBox(width: 16),
+                    Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Spacer(),
+                    const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+                  ],
+                )
+              : Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(icon, size: 36, color: Colors.white),
+                        const SizedBox(height: 8),
+                        Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
+                    if (badge != null && badge > 0)
+                      Positioned(
+                        top: -8,
+                        right: -8,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(color: Colors.yellow, shape: BoxShape.circle),
+                          child: Text(
+                            '$badge',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
                           ),
-                        );
-                      },
-                    );
-                  },
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildEstoqueReport() {
-    final produtosAsync = ref.watch(produtosComSaldoProvider);
-
-    return produtosAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Erro: $e')),
-      data: (items) {
-        if (items.isEmpty) return const Center(child: Text('Nenhum produto cadastrado no estoque.'));
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (context, i) {
-            final p = items[i].produto;
-            final saldo = items[i].saldo;
-            final estaCritico = saldo <= p.estoqueMinimo && p.estoqueMinimo > 0;
-
-            return Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.only(bottom: 10),
-              color: estaCritico ? Colors.red.shade50 : null,
-              child: ListTile(
-                title: Text(p.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('Estoque Atual: ${saldo.toStringAsFixed(1)} ${p.unidade} | Mínimo: ${p.estoqueMinimo.toStringAsFixed(0)}'),
-                trailing: estaCritico
-                    ? const Chip(label: Text('CRÍTICO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)), backgroundColor: Colors.red)
-                    : const Chip(label: Text('REGULAR', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.green),
-              ),
-            );
-          },
-        );
-      },
+        ),
+      ),
     );
   }
 }
+
+// Provider para contador de carência
+final _carenciaCountProvider = StreamProvider<int>((ref) {
+  final service = ref.watch(relatorioRebanhoServiceProvider);
+  return service.watchContadorCarencia();
+});
