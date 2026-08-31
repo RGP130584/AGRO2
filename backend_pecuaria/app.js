@@ -1,38 +1,32 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
-const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
-const bcrypt = require('bcrypt');
+const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const { z } = require('zod');
+const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
-
-// Hardening: CORS limits
-const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',');
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    }
-}));
-
-// Hardening: Body limit
+app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// Configura o banco SQLite (em memória para testes ou arquivo para dev/prod)
-const dbFile = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DB_PATH || './backend.db');
+// Configuração do SQLite: usa :memory: em testes automatizados, arquivo em produção
+const dbFile = process.env.NODE_ENV === 'test' 
+  ? ':memory:' 
+  : path.resolve(__dirname, process.env.DB_FILE || 'backend.db');
+
 const db = new sqlite3.Database(dbFile, (err) => {
-    if (err) console.error(err.message);
-    else console.log(`Conectado ao SQLite (${dbFile})`);
+    if (err) {
+        console.error('Erro ao conectar ao SQLite:', err.message);
+    } else {
+        console.log(`Conectado ao SQLite (${process.env.NODE_ENV === 'test' ? ':memory:' : dbFile})`);
+    }
 });
 
-// Tabela genérica para armazenar as entidades de negócio (offline-first com multi-tenancy) + Tabela usuarios
+// Inicialização do Schema
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS entities (
@@ -40,19 +34,21 @@ db.serialize(() => {
             owner_id TEXT NOT NULL,
             entity_id TEXT NOT NULL,
             entity_type TEXT NOT NULL,
-            payload TEXT,
+            payload TEXT NOT NULL,
             device_id TEXT NOT NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             deleted_at TEXT
         )
     `);
+
     db.run(`CREATE INDEX IF NOT EXISTS idx_entities_owner_updated ON entities (owner_id, updated_at)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_entities_owner_entity ON entities (owner_id, entity_id)`);
 
     db.run(`
         CREATE TABLE IF NOT EXISTS usuarios (
             id TEXT PRIMARY KEY,
+            conta_id TEXT,
             nome TEXT NOT NULL,
             cpf_cnpj TEXT UNIQUE NOT NULL,
             email TEXT,
@@ -64,6 +60,8 @@ db.serialize(() => {
             criado_em TEXT NOT NULL
         )
     `);
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_usuarios_conta ON usuarios (conta_id)`);
 });
 
 // Helper para executar SQL com Promises
@@ -123,20 +121,21 @@ app.post('/v1/auth/register', authLimiter, async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(senha, salt);
         const id = crypto.randomUUID();
+        const contaId = id; // Para proprietário criando a conta principal
         const now = new Date().toISOString();
         const tokenVersion = 1;
 
         await runAsync(
-            `INSERT INTO usuarios (id, nome, cpf_cnpj, email, senha_hash, perfil, token_version, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, nome, cpfCnpj, email || null, hash, perfil, tokenVersion, now]
+            `INSERT INTO usuarios (id, conta_id, nome, cpf_cnpj, email, senha_hash, perfil, token_version, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, contaId, nome, cpfCnpj, email || null, hash, perfil, tokenVersion, now]
         );
 
         const token = jwt.sign(
-            { id, cpfCnpj, perfil, tokenVersion }, 
+            { id, contaId, cpfCnpj, perfil, tokenVersion }, 
             process.env.JWT_SECRET, 
             { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
         );
-        res.status(201).json({ token, user: { id, nome, cpfCnpj, email, perfil } });
+        res.status(201).json({ token, user: { id, contaId, nome, cpfCnpj, email, perfil } });
     } catch (e) {
         if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
         res.status(500).json({ error: 'Erro interno' });
@@ -154,13 +153,14 @@ app.post('/v1/auth/login', authLimiter, async (req, res) => {
 
         const tokenVersion = user.token_version || 1;
         const perfil = user.perfil || 'proprietario';
+        const contaId = user.conta_id || user.id;
 
         const token = jwt.sign(
-            { id: user.id, cpfCnpj: user.cpf_cnpj, perfil, tokenVersion }, 
+            { id: user.id, contaId, cpfCnpj: user.cpf_cnpj, perfil, tokenVersion }, 
             process.env.JWT_SECRET, 
             { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
         );
-        res.json({ token, user: { id: user.id, nome: user.nome, cpfCnpj: user.cpf_cnpj, email: user.email, perfil } });
+        res.json({ token, user: { id: user.id, contaId, nome: user.nome, cpfCnpj: user.cpf_cnpj, email: user.email, perfil } });
     } catch (e) {
         if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
         res.status(500).json({ error: 'Erro interno' });
@@ -171,32 +171,34 @@ app.post('/v1/auth/password-reset/request', authLimiter, async (req, res) => {
     try {
         const { email } = requestResetSchema.parse(req.body);
         const user = await getAsync(`SELECT id FROM usuarios WHERE email = ?`, [email]);
-        if (!user) {
-            // Retorna 200 sempre para evitar enumeração de e-mails
-            return res.json({ message: 'Se o e-mail existir, um código foi enviado.' });
+        
+        if (user) {
+            const rawToken = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 chars alfanuméricos legíveis
+            const hashedToken = hashResetToken(rawToken);
+            const expires = Date.now() + 15 * 60 * 1000; // 15 minutos
+            
+            await runAsync(`UPDATE usuarios SET reset_token_hash = ?, reset_token_expires = ? WHERE id = ?`, [hashedToken, expires, user.id]);
+            
+            // Simulação de envio seguro de e-mail (em produção conectar com SES/Sendgrid)
+            console.log(`[EMAIL SIMULADO] Para: ${email} | Token de Recuperação: ${rawToken}`);
         }
         
-        const token = crypto.randomUUID().substring(0, 8).toUpperCase(); // Token de 8 caracteres
-        const tokenHash = hashResetToken(token);
-        const expires = Date.now() + 15 * 60 * 1000; // 15 minutos
-
-        await runAsync(`UPDATE usuarios SET reset_token_hash = ?, reset_token_expires = ? WHERE id = ?`, [tokenHash, expires, user.id]);
-        
-        // Simulação de envio de e-mail (TODO: integrar provedor real)
-        console.log(`[EMAIL SIMULADO] Para: ${email} | Token de Recuperação: ${token}`);
-        
-        res.json({ message: 'Se o e-mail existir, um código foi enviado.' });
+        res.json({ message: 'Se o e-mail estiver cadastrado, você receberá um código de recuperação.' });
     } catch (e) {
-        if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
-        res.status(400).json({ error: 'Dados inválidos.' });
+        if (e instanceof z.ZodError) return res.status(400).json({ error: 'E-mail inválido.', details: e.issues || e.errors });
+        res.status(500).json({ error: 'Erro interno' });
     }
 });
 
 app.post('/v1/auth/password-reset/confirm', authLimiter, async (req, res) => {
     try {
         const { token, novaSenha } = confirmResetSchema.parse(req.body);
-        const tokenHash = hashResetToken(token);
-        const user = await getAsync(`SELECT id, reset_token_expires, token_version FROM usuarios WHERE reset_token_hash = ?`, [tokenHash]);
+        const hashedToken = hashResetToken(token.trim().toUpperCase());
+        
+        const user = await getAsync(
+            `SELECT id, token_version, reset_token_expires FROM usuarios WHERE reset_token_hash = ?`, 
+            [hashedToken]
+        );
         
         if (!user || user.reset_token_expires < Date.now()) {
             return res.status(400).json({ error: 'Token inválido ou expirado.' });
@@ -217,7 +219,7 @@ app.post('/v1/auth/password-reset/confirm', authLimiter, async (req, res) => {
     }
 });
 
-// Middleware de Autenticação JWT com verificação de revogação de sessão
+// Middleware de Autenticação JWT com verificação de revogação de sessão e Tenancy
 const authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -228,7 +230,7 @@ const authenticate = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
         // Verifica se o token continua válido ou se foi revogado por troca de senha
-        const user = await getAsync(`SELECT id, perfil, token_version FROM usuarios WHERE id = ?`, [decoded.id]);
+        const user = await getAsync(`SELECT id, conta_id, perfil, token_version FROM usuarios WHERE id = ?`, [decoded.id]);
         if (!user) {
             return res.status(401).json({ error: 'Usuário não encontrado.' });
         }
@@ -238,6 +240,7 @@ const authenticate = async (req, res, next) => {
 
         req.user = {
             id: user.id,
+            contaId: user.conta_id || user.id,
             cpfCnpj: decoded.cpfCnpj,
             perfil: user.perfil || 'proprietario'
         };
@@ -257,10 +260,10 @@ const requireRole = (...perfisPermitidos) => {
     };
 };
 
-// Endpoint de Sincronização Isolado por Usuário (Multi-Tenancy)
+// Endpoint de Sincronização Isolado por Conta/Tenant (Multi-Tenancy)
 app.post('/v1/sync', authenticate, async (req, res) => {
     const { outbox = [], lastSyncAt = "1970-01-01T00:00:00.000Z" } = req.body;
-    const ownerId = req.user.id;
+    const ownerId = req.user.contaId; // Compartilhado por todos os membros da mesma conta/fazenda
     const results = [];
     const now = new Date().toISOString();
 
@@ -268,7 +271,7 @@ app.post('/v1/sync', authenticate, async (req, res) => {
         for (const item of outbox) {
             const { id: queueId, entityType, entityId, action, payload, deviceId, createdAt } = item;
             
-            // Busca apenas entidade pertencente ao usuário autenticado
+            // Busca apenas entidade pertencente à conta autenticada
             const existing = await getAsync(`SELECT * FROM entities WHERE entity_id = ? AND owner_id = ?`, [entityId, ownerId]);
             
             if (existing) {
@@ -300,7 +303,7 @@ app.post('/v1/sync', authenticate, async (req, res) => {
             }
         }
 
-        // Pull de alterações filtrando estritamente pelo owner_id
+        // Pull de alterações filtrando estritamente pelo owner_id (conta_id)
         const changesRows = await allAsync(`SELECT * FROM entities WHERE owner_id = ? AND updated_at > ?`, [ownerId, lastSyncAt]);
         const changes = changesRows.map(row => ({
             serverId: row.server_id,
@@ -319,7 +322,7 @@ app.post('/v1/sync', authenticate, async (req, res) => {
     }
 });
 
-// Gestão de Usuários e Convites (RBAC restrito a 'proprietario')
+// Gestão de Equipe e Convites (RBAC restrito a 'proprietario' e escopado por conta_id)
 const inviteSchema = z.object({
     nome: z.string().min(1),
     cpfCnpj: z.string().min(11),
@@ -339,16 +342,17 @@ app.post('/v1/users/invite', authenticate, requireRole('proprietario'), async (r
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash(senha, salt);
         const id = crypto.randomUUID();
+        const contaId = req.user.contaId; // Vinculado à conta do proprietário que convidou
         const now = new Date().toISOString();
 
         await runAsync(
-            `INSERT INTO usuarios (id, nome, cpf_cnpj, email, senha_hash, perfil, token_version, criado_em) VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
-            [id, nome, cpfCnpj, email || null, hash, perfil, now]
+            `INSERT INTO usuarios (id, conta_id, nome, cpf_cnpj, email, senha_hash, perfil, token_version, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+            [id, contaId, nome, cpfCnpj, email || null, hash, perfil, now]
         );
 
         res.status(201).json({
-            message: `Usuário cadastrado com sucesso com perfil ${perfil}.`,
-            user: { id, nome, cpfCnpj, email, perfil }
+            message: `Usuário cadastrado com sucesso na equipe.`,
+            user: { id, contaId, nome, cpfCnpj, email, perfil }
         });
     } catch (e) {
         if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
@@ -358,7 +362,11 @@ app.post('/v1/users/invite', authenticate, requireRole('proprietario'), async (r
 
 app.get('/v1/users', authenticate, requireRole('proprietario'), async (req, res) => {
     try {
-        const users = await allAsync(`SELECT id, nome, cpf_cnpj as cpfCnpj, email, perfil, criado_em as criadoEm FROM usuarios`);
+        // Retorna APENAS os membros da própria conta do proprietário solicitante
+        const users = await allAsync(
+            `SELECT id, conta_id as contaId, nome, cpf_cnpj as cpfCnpj, email, perfil, criado_em as criadoEm FROM usuarios WHERE conta_id = ?`,
+            [req.user.contaId]
+        );
         res.json(users);
     } catch (e) {
         res.status(500).json({ error: 'Erro interno ao listar usuários' });

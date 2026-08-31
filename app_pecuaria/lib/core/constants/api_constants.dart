@@ -14,4 +14,7 @@ class ApiConstants {
 
   /// Endpoint de Sincronização
   static String get syncUrl => '$baseUrl/sync';
+
+  /// Endpoint de Gestão de Usuários e Equipe
+  static String get usersUrl => '$baseUrl/users';
 }

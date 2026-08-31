@@ -17,7 +17,6 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
   final _cpfCnpjCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _senhaCtrl = TextEditingController();
-  String _perfil = 'proprietario';
   bool _loading = false;
   bool _obscureText = true;
 
@@ -74,7 +73,7 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
         unmaskedCpfCnpj,
         _emailCtrl.text.trim(),
         _senhaCtrl.text,
-        perfil: _perfil,
+        perfil: 'proprietario',
       );
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -98,7 +97,7 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Criar Conta'),
+        title: const Text('Criar Conta (Proprietário)'),
         elevation: 0,
       ),
       body: SafeArea(
@@ -110,29 +109,10 @@ class _CadastroViewState extends ConsumerState<CadastroView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Crie sua conta para utilizar o modo offline',
+                  'Crie a conta da sua fazenda para gerenciar rebanho, estoque e equipe',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[700]),
                 ),
-                const SizedBox(height: 20),
-
-                // Seletor de Perfil (Proprietário vs Funcionário)
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'proprietario',
-                      label: Text('Proprietário'),
-                      icon: Icon(Icons.admin_panel_settings_outlined),
-                    ),
-                    ButtonSegment(
-                      value: 'funcionario',
-                      label: Text('Funcionário'),
-                      icon: Icon(Icons.badge_outlined),
-                    ),
-                  ],
-                  selected: {_perfil},
-                  onSelectionChanged: (set) => setState(() => _perfil = set.first),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 
                 TextFormField(
                   controller: _nomeCtrl,
