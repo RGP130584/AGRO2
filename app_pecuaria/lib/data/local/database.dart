@@ -28,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -46,6 +46,9 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(ocorrenciasSanitarias);
           await m.createTable(lancamentosFinanceiros);
           await m.addColumn(estoqueMovimentos, estoqueMovimentos.dataValidade);
+        }
+        if (from < 4) {
+          await m.addColumn(fazendas, fazendas.logoBase64);
         }
       },
       beforeOpen: (details) async {

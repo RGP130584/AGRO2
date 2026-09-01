@@ -43,7 +43,7 @@ class _SplashViewState extends ConsumerState<SplashView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.pets, size: 100, color: Colors.white),
+            Image.asset('assets/images/logo.png', height: 80, fit: BoxFit.contain, color: Colors.white),
             const SizedBox(height: 24),
             Text(
               'AGRO Pecuária',

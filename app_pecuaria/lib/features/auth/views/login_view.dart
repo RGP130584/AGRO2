@@ -103,7 +103,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.pets, size: 100, color: Theme.of(context).colorScheme.primary),
+                  Image.asset('assets/images/logo.png', height: 80, fit: BoxFit.contain, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 24),
                   Text(
                     'AGRO Pecuária',

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../../../data/local/database.dart';
 import '../../../providers/database_provider.dart'; 
@@ -20,6 +22,7 @@ class _FazendaFormViewState extends ConsumerState<FazendaFormView> {
   final _responsavelCtrl = TextEditingController();
   final _cidadeCtrl = TextEditingController();
   String? _estado;
+  String? _logoBase64;
   bool _loading = false;
 
   final List<String> _estados = [
@@ -35,6 +38,26 @@ class _FazendaFormViewState extends ConsumerState<FazendaFormView> {
     _responsavelCtrl.dispose();
     _cidadeCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 70, // Evitar strings Base64 gigantes
+      );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        setState(() {
+          _logoBase64 = base64Encode(bytes);
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao selecionar imagem: $e');
+    }
   }
 
   Future<void> _salvar() async {
@@ -53,6 +76,7 @@ class _FazendaFormViewState extends ConsumerState<FazendaFormView> {
         responsavel: Value(_responsavelCtrl.text.trim().isEmpty ? null : _responsavelCtrl.text.trim()),
         cidade: Value(_cidadeCtrl.text.trim().isEmpty ? null : _cidadeCtrl.text.trim()),
         estado: Value(_estado),
+        logoBase64: Value(_logoBase64),
         deviceId: deviceId,
       ),
     );
@@ -81,6 +105,24 @@ class _FazendaFormViewState extends ConsumerState<FazendaFormView> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            Center(
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  backgroundImage: _logoBase64 != null 
+                    ? MemoryImage(base64Decode(_logoBase64!))
+                    : null,
+                  child: _logoBase64 == null 
+                    ? Icon(Icons.add_a_photo, size: 40, color: Theme.of(context).colorScheme.onPrimaryContainer)
+                    : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Center(child: Text('Logo da Fazenda (Opcional)', style: TextStyle(color: Colors.grey))),
+            const SizedBox(height: 24),
             _buildField(
               controller: _nomeCtrl,
               label: 'Nome da Fazenda *',

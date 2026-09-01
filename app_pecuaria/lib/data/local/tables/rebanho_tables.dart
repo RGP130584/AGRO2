@@ -8,6 +8,7 @@ class Fazendas extends Table with SyncMixin {
   TextColumn get responsavel => text().nullable()();
   TextColumn get cidade => text().nullable()();
   TextColumn get estado => text().withLength(min: 2, max: 2).nullable()();
+  TextColumn get logoBase64 => text().nullable()();
 }
 
 @DataClassName('Piquete')

@@ -91,6 +91,12 @@ class $FazendasTable extends Fazendas with TableInfo<$FazendasTable, Fazenda> {
           GeneratedColumn.checkTextLength(minTextLength: 2, maxTextLength: 2),
       type: DriftSqlType.string,
       requiredDuringInsert: false);
+  static const VerificationMeta _logoBase64Meta =
+      const VerificationMeta('logoBase64');
+  @override
+  late final GeneratedColumn<String> logoBase64 = GeneratedColumn<String>(
+      'logo_base64', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -104,7 +110,8 @@ class $FazendasTable extends Fazendas with TableInfo<$FazendasTable, Fazenda> {
         cpfCnpj,
         responsavel,
         cidade,
-        estado
+        estado,
+        logoBase64
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -173,6 +180,12 @@ class $FazendasTable extends Fazendas with TableInfo<$FazendasTable, Fazenda> {
       context.handle(_estadoMeta,
           estado.isAcceptableOrUnknown(data['estado']!, _estadoMeta));
     }
+    if (data.containsKey('logo_base64')) {
+      context.handle(
+          _logoBase64Meta,
+          logoBase64.isAcceptableOrUnknown(
+              data['logo_base64']!, _logoBase64Meta));
+    }
     return context;
   }
 
@@ -206,6 +219,8 @@ class $FazendasTable extends Fazendas with TableInfo<$FazendasTable, Fazenda> {
           .read(DriftSqlType.string, data['${effectivePrefix}cidade']),
       estado: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}estado']),
+      logoBase64: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}logo_base64']),
     );
   }
 
@@ -248,6 +263,7 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
   final String? responsavel;
   final String? cidade;
   final String? estado;
+  final String? logoBase64;
   const Fazenda(
       {required this.id,
       this.serverId,
@@ -260,7 +276,8 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
       this.cpfCnpj,
       this.responsavel,
       this.cidade,
-      this.estado});
+      this.estado,
+      this.logoBase64});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -287,6 +304,9 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
     }
     if (!nullToAbsent || estado != null) {
       map['estado'] = Variable<String>(estado);
+    }
+    if (!nullToAbsent || logoBase64 != null) {
+      map['logo_base64'] = Variable<String>(logoBase64);
     }
     return map;
   }
@@ -315,6 +335,9 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
           cidade == null && nullToAbsent ? const Value.absent() : Value(cidade),
       estado:
           estado == null && nullToAbsent ? const Value.absent() : Value(estado),
+      logoBase64: logoBase64 == null && nullToAbsent
+          ? const Value.absent()
+          : Value(logoBase64),
     );
   }
 
@@ -334,6 +357,7 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
       responsavel: serializer.fromJson<String?>(json['responsavel']),
       cidade: serializer.fromJson<String?>(json['cidade']),
       estado: serializer.fromJson<String?>(json['estado']),
+      logoBase64: serializer.fromJson<String?>(json['logoBase64']),
     );
   }
   @override
@@ -352,6 +376,7 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
       'responsavel': serializer.toJson<String?>(responsavel),
       'cidade': serializer.toJson<String?>(cidade),
       'estado': serializer.toJson<String?>(estado),
+      'logoBase64': serializer.toJson<String?>(logoBase64),
     };
   }
 
@@ -367,7 +392,8 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
           Value<String?> cpfCnpj = const Value.absent(),
           Value<String?> responsavel = const Value.absent(),
           Value<String?> cidade = const Value.absent(),
-          Value<String?> estado = const Value.absent()}) =>
+          Value<String?> estado = const Value.absent(),
+          Value<String?> logoBase64 = const Value.absent()}) =>
       Fazenda(
         id: id ?? this.id,
         serverId: serverId.present ? serverId.value : this.serverId,
@@ -381,6 +407,7 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
         responsavel: responsavel.present ? responsavel.value : this.responsavel,
         cidade: cidade.present ? cidade.value : this.cidade,
         estado: estado.present ? estado.value : this.estado,
+        logoBase64: logoBase64.present ? logoBase64.value : this.logoBase64,
       );
   Fazenda copyWithCompanion(FazendasCompanion data) {
     return Fazenda(
@@ -398,6 +425,8 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
           data.responsavel.present ? data.responsavel.value : this.responsavel,
       cidade: data.cidade.present ? data.cidade.value : this.cidade,
       estado: data.estado.present ? data.estado.value : this.estado,
+      logoBase64:
+          data.logoBase64.present ? data.logoBase64.value : this.logoBase64,
     );
   }
 
@@ -415,14 +444,27 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
           ..write('cpfCnpj: $cpfCnpj, ')
           ..write('responsavel: $responsavel, ')
           ..write('cidade: $cidade, ')
-          ..write('estado: $estado')
+          ..write('estado: $estado, ')
+          ..write('logoBase64: $logoBase64')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, serverId, syncStatus, deviceId, createdAt,
-      updatedAt, deletedAt, nome, cpfCnpj, responsavel, cidade, estado);
+  int get hashCode => Object.hash(
+      id,
+      serverId,
+      syncStatus,
+      deviceId,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      nome,
+      cpfCnpj,
+      responsavel,
+      cidade,
+      estado,
+      logoBase64);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -438,7 +480,8 @@ class Fazenda extends DataClass implements Insertable<Fazenda> {
           other.cpfCnpj == this.cpfCnpj &&
           other.responsavel == this.responsavel &&
           other.cidade == this.cidade &&
-          other.estado == this.estado);
+          other.estado == this.estado &&
+          other.logoBase64 == this.logoBase64);
 }
 
 class FazendasCompanion extends UpdateCompanion<Fazenda> {
@@ -454,6 +497,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
   final Value<String?> responsavel;
   final Value<String?> cidade;
   final Value<String?> estado;
+  final Value<String?> logoBase64;
   final Value<int> rowid;
   const FazendasCompanion({
     this.id = const Value.absent(),
@@ -468,6 +512,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
     this.responsavel = const Value.absent(),
     this.cidade = const Value.absent(),
     this.estado = const Value.absent(),
+    this.logoBase64 = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FazendasCompanion.insert({
@@ -483,6 +528,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
     this.responsavel = const Value.absent(),
     this.cidade = const Value.absent(),
     this.estado = const Value.absent(),
+    this.logoBase64 = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         deviceId = Value(deviceId),
@@ -500,6 +546,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
     Expression<String>? responsavel,
     Expression<String>? cidade,
     Expression<String>? estado,
+    Expression<String>? logoBase64,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -515,6 +562,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
       if (responsavel != null) 'responsavel': responsavel,
       if (cidade != null) 'cidade': cidade,
       if (estado != null) 'estado': estado,
+      if (logoBase64 != null) 'logo_base64': logoBase64,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -532,6 +580,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
       Value<String?>? responsavel,
       Value<String?>? cidade,
       Value<String?>? estado,
+      Value<String?>? logoBase64,
       Value<int>? rowid}) {
     return FazendasCompanion(
       id: id ?? this.id,
@@ -546,6 +595,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
       responsavel: responsavel ?? this.responsavel,
       cidade: cidade ?? this.cidade,
       estado: estado ?? this.estado,
+      logoBase64: logoBase64 ?? this.logoBase64,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -589,6 +639,9 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
     if (estado.present) {
       map['estado'] = Variable<String>(estado.value);
     }
+    if (logoBase64.present) {
+      map['logo_base64'] = Variable<String>(logoBase64.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -610,6 +663,7 @@ class FazendasCompanion extends UpdateCompanion<Fazenda> {
           ..write('responsavel: $responsavel, ')
           ..write('cidade: $cidade, ')
           ..write('estado: $estado, ')
+          ..write('logoBase64: $logoBase64, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9283,6 +9337,7 @@ typedef $$FazendasTableCreateCompanionBuilder = FazendasCompanion Function({
   Value<String?> responsavel,
   Value<String?> cidade,
   Value<String?> estado,
+  Value<String?> logoBase64,
   Value<int> rowid,
 });
 typedef $$FazendasTableUpdateCompanionBuilder = FazendasCompanion Function({
@@ -9298,6 +9353,7 @@ typedef $$FazendasTableUpdateCompanionBuilder = FazendasCompanion Function({
   Value<String?> responsavel,
   Value<String?> cidade,
   Value<String?> estado,
+  Value<String?> logoBase64,
   Value<int> rowid,
 });
 
@@ -9345,6 +9401,9 @@ class $$FazendasTableFilterComposer
 
   ColumnFilters<String> get estado => $composableBuilder(
       column: $table.estado, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get logoBase64 => $composableBuilder(
+      column: $table.logoBase64, builder: (column) => ColumnFilters(column));
 }
 
 class $$FazendasTableOrderingComposer
@@ -9391,6 +9450,9 @@ class $$FazendasTableOrderingComposer
 
   ColumnOrderings<String> get estado => $composableBuilder(
       column: $table.estado, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get logoBase64 => $composableBuilder(
+      column: $table.logoBase64, builder: (column) => ColumnOrderings(column));
 }
 
 class $$FazendasTableAnnotationComposer
@@ -9437,6 +9499,9 @@ class $$FazendasTableAnnotationComposer
 
   GeneratedColumn<String> get estado =>
       $composableBuilder(column: $table.estado, builder: (column) => column);
+
+  GeneratedColumn<String> get logoBase64 => $composableBuilder(
+      column: $table.logoBase64, builder: (column) => column);
 }
 
 class $$FazendasTableTableManager extends RootTableManager<
@@ -9474,6 +9539,7 @@ class $$FazendasTableTableManager extends RootTableManager<
             Value<String?> responsavel = const Value.absent(),
             Value<String?> cidade = const Value.absent(),
             Value<String?> estado = const Value.absent(),
+            Value<String?> logoBase64 = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               FazendasCompanion(
@@ -9489,6 +9555,7 @@ class $$FazendasTableTableManager extends RootTableManager<
             responsavel: responsavel,
             cidade: cidade,
             estado: estado,
+            logoBase64: logoBase64,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -9504,6 +9571,7 @@ class $$FazendasTableTableManager extends RootTableManager<
             Value<String?> responsavel = const Value.absent(),
             Value<String?> cidade = const Value.absent(),
             Value<String?> estado = const Value.absent(),
+            Value<String?> logoBase64 = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               FazendasCompanion.insert(
@@ -9519,6 +9587,7 @@ class $$FazendasTableTableManager extends RootTableManager<
             responsavel: responsavel,
             cidade: cidade,
             estado: estado,
+            logoBase64: logoBase64,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
