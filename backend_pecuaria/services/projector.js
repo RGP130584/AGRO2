@@ -81,6 +81,7 @@ const PROJECTION_MAP = {
       responsavel: 'responsavel',
       observacao: 'observacao',
       carencia_dias: 'carenciaDias',
+      intervencao_origem_id: 'intervencaoOrigemId',
     }
   },
   ocorrencias_sanitarias: {
@@ -102,6 +103,7 @@ const PROJECTION_MAP = {
       nome: 'nome',
       descricao: 'descricao',
       ativa: 'ativa',
+      origem_recomendacao_id: 'origemRecomendacaoId',
     }
   },
   fornecimentos_dieta: {

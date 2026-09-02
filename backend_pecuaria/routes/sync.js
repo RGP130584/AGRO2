@@ -5,16 +5,27 @@ const express = require('express');
 const crypto = require('crypto');
 const { runAsync, getAsync, allAsync } = require('../db/connection');
 const authenticate = require('../middlewares/authenticate');
+const requireEntitlement = require('../middlewares/requireEntitlement');
+const authorizeGrant = require('../middlewares/authorizeGrant');
 const { projectEntity } = require('../services/projector');
 
 const router = express.Router();
 
-// ── POST /v1/sync — Sincronização Isolada por Conta/Tenant ──────────
-router.post('/', authenticate, async (req, res) => {
+// ── POST /v1/sync — Sincronização Isolada por Conta/Tenant ou Grant ──
+router.post('/', authenticate, requireEntitlement('CORE'), authorizeGrant('consulta'), async (req, res) => {
   const { outbox = [], lastSyncAt = "1970-01-01T00:00:00.000Z" } = req.body;
-  const ownerId = req.user.contaId; // Compartilhado por todos os membros da mesma conta/fazenda
+  const ownerId = req.effectiveOwnerId || req.user.contaId;
   const results = [];
   const now = new Date().toISOString();
+
+  // Se for veterinário e estiver tentando enviar alterações (push)
+  if (req.user.perfil === 'veterinario' && outbox.length > 0) {
+    const permissoes = JSON.parse(req.grant?.permissions || '[]');
+    const podeAlterar = permissoes.includes('intervencao') || permissoes.includes('tecnico') || permissoes.includes('administrativo');
+    if (!podeAlterar) {
+      return res.status(403).json({ error: 'Nível de permissão insuficiente para enviar alterações (exige técnico ou intervenção).' });
+    }
+  }
 
   try {
     for (const item of outbox) {

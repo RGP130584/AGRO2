@@ -8,6 +8,7 @@ const { z } = require('zod');
 const { runAsync, getAsync, allAsync } = require('../db/connection');
 const authenticate = require('../middlewares/authenticate');
 const requireRole = require('../middlewares/requireRole');
+const requireEntitlement = require('../middlewares/requireEntitlement');
 const { logEvent } = require('../services/audit');
 
 const router = express.Router();
@@ -21,7 +22,7 @@ const inviteSchema = z.object({
 });
 
 // ── Convite de Membro da Equipe ──────────────────────────────────────
-router.post('/invite', authenticate, requireRole('proprietario'), async (req, res) => {
+router.post('/invite', authenticate, requireRole('proprietario'), requireEntitlement('CORE'), async (req, res) => {
   try {
     const { nome, cpfCnpj, email, senha, perfil } = inviteSchema.parse(req.body);
     const existing = await getAsync(`SELECT id FROM usuarios WHERE cpf_cnpj = ?`, [cpfCnpj]);
@@ -61,7 +62,7 @@ router.post('/invite', authenticate, requireRole('proprietario'), async (req, re
 });
 
 // ── Listar Membros da Equipe ─────────────────────────────────────────
-router.get('/', authenticate, requireRole('proprietario'), async (req, res) => {
+router.get('/', authenticate, requireRole('proprietario'), requireEntitlement('CORE'), async (req, res) => {
   try {
     // Retorna APENAS os membros da própria conta do proprietário solicitante
     const users = await allAsync(

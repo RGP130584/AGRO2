@@ -17,4 +17,7 @@ class ApiConstants {
 
   /// Endpoint de Gestão de Usuários e Equipe
   static String get usersUrl => '$baseUrl/users';
+
+  /// Endpoint do Módulo Veterinário e Sharing Grants
+  static String get vetUrl => '$baseUrl/vet';
 }

@@ -10,6 +10,7 @@ import '../../relatorios/views/relatorios_view.dart';
 import '../../sync/views/sync_conflict_view.dart';
 import '../../auth/services/auth_service.dart';
 import '../../equipe/views/equipe_view.dart';
+import '../../equipe/views/meus_veterinarios_view.dart';
 
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
@@ -26,7 +27,14 @@ class HomeView extends ConsumerWidget {
         title: const Text('AGRO Pecuária'),
         centerTitle: false,
         actions: [
-          if (isProprietario)
+          if (isProprietario) ...[
+            IconButton(
+              icon: const Icon(Icons.medical_services_outlined),
+              tooltip: 'Veterinários & Consultores',
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const MeusVeterinariosView()));
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.group_outlined),
               tooltip: 'Minha Equipe',
@@ -34,6 +42,7 @@ class HomeView extends ConsumerWidget {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const EquipeView()));
               },
             ),
+          ],
           if (currentUser != null)
             Padding(
               padding: const EdgeInsets.only(right: 12.0),

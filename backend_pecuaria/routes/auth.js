@@ -25,7 +25,9 @@ const registerSchema = z.object({
   cpfCnpj: z.string().min(11),
   email: z.string().email().optional().or(z.literal('')),
   senha: z.string().min(6),
-  perfil: z.enum(['proprietario', 'funcionario']).default('proprietario')
+  perfil: z.enum(['proprietario', 'funcionario', 'veterinario']).default('proprietario'),
+  crmv: z.string().optional(),
+  telefone: z.string().optional()
 });
 const loginSchema = z.object({
   cpfCnpj: z.string().min(11),
@@ -40,16 +42,23 @@ const hashResetToken = (token) => crypto.createHash('sha256').update(token).dige
 // ── Register ─────────────────────────────────────────────────────────
 router.post('/register', authLimiter, async (req, res) => {
   try {
-    const { nome, cpfCnpj, email, senha, perfil } = registerSchema.parse(req.body);
+    const { nome, cpfCnpj, email, senha, perfil, crmv, telefone } = registerSchema.parse(req.body);
     const existing = await getAsync(`SELECT id FROM usuarios WHERE cpf_cnpj = ?`, [cpfCnpj]);
     if (existing) {
       return res.status(400).json({ error: 'CPF/CNPJ já cadastrado.' });
     }
 
+    if (perfil === 'veterinario' && crmv) {
+      const existingCrmv = await getAsync(`SELECT id FROM veterinarians WHERE crmv = ?`, [crmv]);
+      if (existingCrmv) {
+        return res.status(400).json({ error: 'CRMV já cadastrado.' });
+      }
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(senha, salt);
     const id = crypto.randomUUID();
-    const contaId = id; // Para proprietário criando a conta principal
+    const contaId = perfil === 'veterinario' ? null : id; // Veterinário não tem conta_id fixo
     const now = new Date().toISOString();
     const tokenVersion = 1;
 
@@ -58,8 +67,38 @@ router.post('/register', authLimiter, async (req, res) => {
       [id, contaId, nome, cpfCnpj, email || null, hash, perfil, tokenVersion, now]
     );
 
+    let veterinarianId = null;
+    if (perfil === 'veterinario') {
+      veterinarianId = crypto.randomUUID();
+      await runAsync(
+        `INSERT INTO veterinarians (id, usuario_id, nome, crmv, telefone, criado_em) VALUES (?, ?, ?, ?, ?, ?)`,
+        [veterinarianId, id, nome, crmv || null, telefone || null, now]
+      );
+
+      // Subscription VET_PRO para o veterinário
+      await runAsync(
+        `INSERT INTO subscriptions (id, conta_id, plan_id, status, starts_at, ends_at, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)`,
+        [crypto.randomUUID(), id, 'VET_PRO', 'active', now, now]
+      );
+    } else {
+      // Cria subscription padrão CORE ativa para a nova conta de produtor
+      await runAsync(
+        `INSERT INTO subscriptions (id, conta_id, plan_id, status, starts_at, ends_at, created_at) VALUES (?, ?, ?, ?, ?, NULL, ?)`,
+        [crypto.randomUUID(), contaId, 'CORE', 'active', now, now]
+      );
+    }
+
+    const tokenPayload = {
+      id,
+      contaId,
+      cpfCnpj,
+      perfil,
+      tokenVersion,
+      ...(veterinarianId && { veterinarianId })
+    };
+
     const token = jwt.sign(
-      { id, contaId, cpfCnpj, perfil, tokenVersion },
+      tokenPayload,
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
@@ -67,7 +106,18 @@ router.post('/register', authLimiter, async (req, res) => {
     // Audit trail
     await logEvent({ actorUserId: id, actorContaId: contaId, action: 'register', entityType: 'usuario', entityId: id });
 
-    res.status(201).json({ token, user: { id, contaId, nome, cpfCnpj, email, perfil } });
+    res.status(201).json({
+      token,
+      user: {
+        id,
+        contaId,
+        nome,
+        cpfCnpj,
+        email,
+        perfil,
+        ...(veterinarianId && { veterinarianId, crmv })
+      }
+    });
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
     res.status(500).json({ error: 'Erro interno' });
@@ -86,10 +136,29 @@ router.post('/login', authLimiter, async (req, res) => {
 
     const tokenVersion = user.token_version || 1;
     const perfil = user.perfil || 'proprietario';
-    const contaId = user.conta_id || user.id;
+    const contaId = perfil === 'veterinario' ? null : (user.conta_id || user.id);
+
+    let veterinarianId = null;
+    let crmv = null;
+    if (perfil === 'veterinario') {
+      const vet = await getAsync(`SELECT id, crmv FROM veterinarians WHERE usuario_id = ?`, [user.id]);
+      if (vet) {
+        veterinarianId = vet.id;
+        crmv = vet.crmv;
+      }
+    }
+
+    const tokenPayload = {
+      id: user.id,
+      contaId,
+      cpfCnpj: user.cpf_cnpj,
+      perfil,
+      tokenVersion,
+      ...(veterinarianId && { veterinarianId })
+    };
 
     const token = jwt.sign(
-      { id: user.id, contaId, cpfCnpj: user.cpf_cnpj, perfil, tokenVersion },
+      tokenPayload,
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
     );
@@ -97,7 +166,18 @@ router.post('/login', authLimiter, async (req, res) => {
     // Audit trail
     await logEvent({ actorUserId: user.id, actorContaId: contaId, action: 'login', entityType: 'usuario', entityId: user.id });
 
-    res.json({ token, user: { id: user.id, contaId, nome: user.nome, cpfCnpj: user.cpf_cnpj, email: user.email, perfil } });
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        contaId,
+        nome: user.nome,
+        cpfCnpj: user.cpf_cnpj,
+        email: user.email,
+        perfil,
+        ...(veterinarianId && { veterinarianId, crmv })
+      }
+    });
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Dados inválidos.', details: e.issues || e.errors });
     res.status(500).json({ error: 'Erro interno' });

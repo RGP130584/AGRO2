@@ -9,6 +9,7 @@ import '../../rebanho/views/fazenda_list_view.dart';
 import '../services/nutricao_service.dart';
 import 'dieta_form_view.dart';
 import 'fornecimento_form_view.dart';
+import 'recomendacoes_nutricionais_view.dart';
 
 final selectedFazendaNutricaoProvider = StateProvider<String?>((ref) => null);
 
@@ -77,6 +78,16 @@ class _NutricaoViewState extends ConsumerState<NutricaoView> with SingleTickerPr
               ],
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.recommend_outlined),
+                tooltip: 'Recomendações Nutricionais',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RecomendacoesNutricionaisView()),
+                  );
+                },
+              ),
               if (fazendas.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(right: 12.0),

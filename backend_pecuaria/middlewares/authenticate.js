@@ -22,11 +22,18 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'Sessão expirada ou revogada. Faça login novamente.' });
     }
 
+    let veterinarianId = decoded.veterinarianId || null;
+    if (user.perfil === 'veterinario' && !veterinarianId) {
+      const vet = await getAsync(`SELECT id FROM veterinarians WHERE usuario_id = ?`, [user.id]);
+      if (vet) veterinarianId = vet.id;
+    }
+
     req.user = {
       id: user.id,
-      contaId: user.conta_id || user.id,
+      contaId: user.perfil === 'veterinario' ? null : (user.conta_id || user.id),
       cpfCnpj: decoded.cpfCnpj,
-      perfil: user.perfil || 'proprietario'
+      perfil: user.perfil || 'proprietario',
+      veterinarianId
     };
     next();
   } catch (e) {

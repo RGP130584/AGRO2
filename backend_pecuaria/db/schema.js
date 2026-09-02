@@ -146,6 +146,7 @@ function initializeSchema() {
         responsavel TEXT,
         observacao TEXT,
         carencia_dias INTEGER,
+        intervencao_origem_id TEXT,
         updated_at TEXT,
         deleted_at TEXT
       )
@@ -177,6 +178,7 @@ function initializeSchema() {
         nome TEXT,
         descricao TEXT,
         ativa INTEGER,
+        origem_recomendacao_id TEXT,
         updated_at TEXT,
         deleted_at TEXT
       )
@@ -262,6 +264,195 @@ function initializeSchema() {
     `);
     db.run(`CREATE INDEX IF NOT EXISTS idx_audit_actor_conta ON audit_events (actor_conta_id, created_at)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_events (action, created_at)`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ONDA 4: Entitlements e Subscriptions ─────────────────────────
+    // ══════════════════════════════════════════════════════════════════
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS plans (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL,
+        entitlements TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id TEXT PRIMARY KEY,
+        conta_id TEXT NOT NULL,
+        plan_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        starts_at TEXT NOT NULL,
+        ends_at TEXT,
+        created_at TEXT NOT NULL
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_subscriptions_conta ON subscriptions (conta_id, status)`);
+
+    // Inserir planos padrão (CORE e VET_PRO) se ainda não existirem
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT OR IGNORE INTO plans (id, nome, entitlements, created_at) VALUES (?, ?, ?, ?)`,
+      ['CORE', 'Plano Produtor Core', JSON.stringify(['CORE']), now]
+    );
+    db.run(
+      `INSERT OR IGNORE INTO plans (id, nome, entitlements, created_at) VALUES (?, ?, ?, ?)`,
+      ['VET_PRO', 'Plano Veterinário Profissional', JSON.stringify(['CORE', 'VET_PORTAL', 'VET_CLIENTS']), now]
+    );
+
+    // Migrar automaticamente contas existentes que ainda não têm subscription ativa
+    db.run(`
+      INSERT INTO subscriptions (id, conta_id, plan_id, status, starts_at, ends_at, created_at)
+      SELECT 
+        'sub-' || u.conta_id, 
+        u.conta_id, 
+        'CORE', 
+        'active', 
+        u.criado_em,
+        NULL,
+        u.criado_em
+      FROM usuarios u
+      WHERE u.conta_id IS NOT NULL 
+        AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.conta_id = u.conta_id)
+      GROUP BY u.conta_id
+    `);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ONDA 5: Sharing Grants & Módulo Veterinário ──────────────────
+    // ══════════════════════════════════════════════════════════════════
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS veterinarians (
+        id TEXT PRIMARY KEY,
+        usuario_id TEXT NOT NULL UNIQUE,
+        nome TEXT NOT NULL,
+        crmv TEXT UNIQUE,
+        telefone TEXT,
+        criado_em TEXT NOT NULL
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_vets_usuario ON veterinarians (usuario_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_vets_crmv ON veterinarians (crmv)`);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS sharing_grants (
+        id TEXT PRIMARY KEY,
+        tenant_conta_id TEXT NOT NULL,
+        veterinarian_id TEXT NOT NULL,
+        scope_type TEXT NOT NULL DEFAULT 'fazenda',
+        scope_id TEXT,
+        permissions TEXT NOT NULL,
+        granted_by TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL,
+        accepted_at TEXT,
+        expires_at TEXT,
+        revoked_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_grants_tenant ON sharing_grants (tenant_conta_id, status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_grants_vet ON sharing_grants (veterinarian_id, status)`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ONDA 6: Agenda e Alertas do Portal Veterinário ───────────────
+    // ══════════════════════════════════════════════════════════════════
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS vet_agenda (
+        id TEXT PRIMARY KEY,
+        veterinarian_id TEXT NOT NULL,
+        tenant_conta_id TEXT NOT NULL,
+        titulo TEXT NOT NULL,
+        descricao TEXT,
+        data_hora TEXT NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'visita',
+        status TEXT NOT NULL DEFAULT 'agendado',
+        created_at TEXT NOT NULL
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_agenda_vet ON vet_agenda (veterinarian_id, data_hora)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_agenda_tenant ON vet_agenda (tenant_conta_id)`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ONDA 7: Saúde Avançada — Intervenções Append-Only ─────────────
+    // ══════════════════════════════════════════════════════════════════
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS intervencoes_veterinarias (
+        id TEXT PRIMARY KEY,
+        animal_id TEXT NOT NULL,
+        tenant_conta_id TEXT NOT NULL,
+        veterinarian_id TEXT NOT NULL,
+        grant_id TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        intervencao_anterior_id TEXT,
+        visita_id TEXT,
+        created_at TEXT NOT NULL
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_intervencoes_animal ON intervencoes_veterinarias (animal_id, created_at)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_intervencoes_tenant ON intervencoes_veterinarias (tenant_conta_id, created_at)`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ONDA 8: Nutrição Avançada — Recomendações do Veterinário ──────
+    // ══════════════════════════════════════════════════════════════════
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS recomendacoes_nutricionais (
+        id TEXT PRIMARY KEY,
+        lote_id TEXT NOT NULL,
+        tenant_conta_id TEXT NOT NULL,
+        veterinarian_id TEXT NOT NULL,
+        grant_id TEXT NOT NULL,
+        dieta_sugerida TEXT NOT NULL,
+        justificativa TEXT,
+        status TEXT NOT NULL DEFAULT 'pendente',
+        created_at TEXT NOT NULL,
+        decided_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_recom_nutri_lote ON recomendacoes_nutricionais (lote_id, created_at)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_recom_nutri_tenant ON recomendacoes_nutricionais (tenant_conta_id, status)`);
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ONDA 9: Operação Profissional (Visitas, Laudos e OS) ──────────
+    // ══════════════════════════════════════════════════════════════════
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS vet_visitas (
+        id TEXT PRIMARY KEY,
+        veterinarian_id TEXT NOT NULL,
+        tenant_conta_id TEXT NOT NULL,
+        data_hora TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'agendada',
+        observacoes TEXT,
+        created_at TEXT NOT NULL,
+        concluida_at TEXT
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_visitas_vet ON vet_visitas (veterinarian_id, data_hora)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_visitas_tenant ON vet_visitas (tenant_conta_id)`);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS vet_ordens_servico (
+        id TEXT PRIMARY KEY,
+        visita_id TEXT,
+        veterinarian_id TEXT NOT NULL,
+        tenant_conta_id TEXT NOT NULL,
+        descricao TEXT NOT NULL,
+        itens TEXT NOT NULL,
+        valor_total REAL NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'aberta',
+        data_vencimento TEXT,
+        data_pagamento TEXT,
+        created_at TEXT NOT NULL
+      )
+    `);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_os_vet ON vet_ordens_servico (veterinarian_id, status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_os_tenant ON vet_ordens_servico (tenant_conta_id)`);
   });
 }
 
