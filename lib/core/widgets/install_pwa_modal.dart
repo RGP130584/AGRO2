@@ -1,34 +1,21 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pwa_install.dart'
-    show getUserAgent, triggerInstallPrompt, waitBeforeInstallPrompt;
+    show getUserAgent, isStandalone, triggerInstallPrompt;
 
-/// Modal de instalação do app (PWA).
+/// Diálogo automático de instalação do PWA.
 ///
-/// Baseado no manifesto da pasta `web` (nome, cores e ícones), mostra um
-/// diálogo ao abrir o app com as instruções de instalação adequadas para:
-/// - Web em desktop (Windows/Linux): Chrome/Edge com `beforeinstallprompt`
-/// - Android
-/// - iOS
+/// Chamado no [LoginView] e no [HomeView]. Aparece sempre que o app
+/// não está instalado como PWA ([isStandalone] == false).
+/// Não usa persistência — se o app não estiver instalado, o diálogo
+/// volta a aparecer no próximo acesso.
 class InstallPwaModal extends StatefulWidget {
   const InstallPwaModal({super.key});
 
-  static const String _dismissedKey = 'install_modal_dismissed';
-
-  /// Mostra o modal de forma segura. Em apps nativos (android/ios) ele é
-  /// ignorado, pois a instalação já ocorreu pela loja.
   static Future<void> show(BuildContext context) async {
-    if (!kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS)) {
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_dismissedKey) ?? false) return;
+    if (!kIsWeb) return;
+    if (isStandalone()) return;
 
     if (!context.mounted) return;
     await showDialog<void>(
@@ -42,156 +29,136 @@ class InstallPwaModal extends StatefulWidget {
   State<InstallPwaModal> createState() => _InstallPwaModalState();
 }
 
-enum _InstallTarget { chromeDesktop, linux, android, ios, other }
+enum _PlatformKind { desktop, android, ios }
 
 class _InstallPwaModalState extends State<InstallPwaModal> {
-  _InstallTarget _target = _InstallTarget.other;
-  bool _canInstall = false;
+  _PlatformKind _platform = _PlatformKind.desktop;
+  bool _detecting = true;
 
   @override
   void initState() {
     super.initState();
-    _detectPlatform();
+    _detect();
   }
 
-  Future<void> _detectPlatform() async {
-    if (!kIsWeb) {
-      _target = _nativePlatform();
-    } else {
-      await _initWebInstallPrompt();
-      _target = _webTarget();
-    }
-    if (mounted) setState(() {});
-  }
-
-  _InstallTarget _nativePlatform() {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return _InstallTarget.android;
-      case TargetPlatform.iOS:
-        return _InstallTarget.ios;
-      case TargetPlatform.linux:
-        return _InstallTarget.linux;
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
-        return _InstallTarget.chromeDesktop;
-      default:
-        return _InstallTarget.other;
-    }
-  }
-
-  _InstallTarget _webTarget() {
+  Future<void> _detect() async {
     final ua = getUserAgent();
-    if (ua == null) return _InstallTarget.chromeDesktop;
+    _platform = _detectPlatform(ua);
+    if (!mounted) return;
+
+    setState(() => _detecting = false);
+  }
+
+  _PlatformKind _detectPlatform(String? ua) {
+    if (ua == null) return _PlatformKind.desktop;
     final lower = ua.toLowerCase();
-    if (lower.contains('android')) return _InstallTarget.android;
+    if (lower.contains('android')) return _PlatformKind.android;
     if (lower.contains('iphone') ||
         lower.contains('ipad') ||
         lower.contains('ipod')) {
-      return _InstallTarget.ios;
+      return _PlatformKind.ios;
     }
-    if (lower.contains('linux')) return _InstallTarget.linux;
-    return _InstallTarget.chromeDesktop;
+    return _PlatformKind.desktop;
   }
 
-  Future<void> _initWebInstallPrompt() async {
-    _canInstall = await waitBeforeInstallPrompt();
-  }
+  bool get _isIos => _platform == _PlatformKind.ios;
 
-  Future<void> _dismiss([bool markSeen = false]) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (markSeen) await prefs.setBool(InstallPwaModal._dismissedKey, true);
+  // Só no iOS a instalação é manual (Adicionar à Tela de Início) —
+  // Android e desktop usam o prompt nativo do PWA.
+  bool get _manualOnly => _isIos;
+
+  void _close() {
     if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _confirm() async {
+    // Sempre tenta disparar o prompt nativo — ele pode ter chegado
+    // depois da janela de detecção de 2 s. Se não existir, é no-op.
+    triggerInstallPrompt();
+    _close();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final (title, message) = _contentFor(_target, _canInstall);
+
+    if (_detecting) {
+      return AlertDialog(
+        icon: const SizedBox(
+          width: 56,
+          height: 56,
+          child: CircularProgressIndicator(strokeWidth: 3),
+        ),
+        title: const Text('Preparando instalação...', textAlign: TextAlign.center),
+        content: const Text(
+          'Verificando compatibilidade do navegador.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: _close,
+            child: const Text('Agora não'),
+          ),
+        ],
+      );
+    }
+
+    if (_manualOnly) {
+      final (title, desc) = _manualGuide();
+      return AlertDialog(
+        icon: const Icon(Icons.add_to_home_screen, size: 56, color: Colors.green),
+        title: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: Text(desc, textAlign: TextAlign.center),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: _close,
+            child: const Text('Agora não'),
+          ),
+          FilledButton(
+            onPressed: _confirm,
+            child: const Text('Entendi'),
+          ),
+        ],
+      );
+    }
 
     return AlertDialog(
-      icon: const Icon(
-        Icons.download_for_offline,
-        size: 56,
-        color: Colors.green,
-      ),
+      icon: const Icon(Icons.download_for_offline, size: 56, color: Colors.green),
       title: Text(
-        title,
+        'Instalar o BovControl Pro',
         textAlign: TextAlign.center,
-        style: theme.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
       ),
-      content: Text(
-        message,
+      content: const Text(
+        'Toque em Instalar para adicionar o app ao seu dispositivo.',
         textAlign: TextAlign.center,
-        style: theme.textTheme.bodyMedium,
       ),
       actionsAlignment: MainAxisAlignment.center,
       actions: [
         TextButton(
-          onPressed: () => _dismiss(true),
+          onPressed: _close,
           child: const Text('Agora não'),
         ),
-        FilledButton(
-          onPressed: _canInstall ? _install : () => _dismiss(true),
-          child: Text(_canInstall ? 'Instalar' : 'Entendi'),
+        FilledButton.icon(
+          onPressed: _confirm,
+          icon: const Icon(Icons.download, size: 18),
+          label: const Text('Instalar'),
         ),
       ],
     );
   }
 
-  (String, String) _contentFor(_InstallTarget target, bool canInstall) {
-    switch (target) {
-      case _InstallTarget.chromeDesktop:
-        if (canInstall) {
-          return (
-            'Instalar o BovControl Pro',
-            'Instale o app para usá-lo offline e com acesso rápido pela '
-            'área de trabalho ou menu iniciar.',
-          );
-        }
-        return (
-          'Instalar o BovControl Pro',
-          'Para instalar no navegador, use o ícone de instalação (⤓) na '
-          'barra de endereço ou o menu em "Instalar aplicativo".',
-        );
-      case _InstallTarget.android:
-        return (
-          'Instalar o BovControl Pro',
-          'Para instalar no Android, use o menu do navegador (⋮) e toque em '
-          '"Adicionar à tela inicial" ou "Instalar aplicativo".',
-        );
-      case _InstallTarget.ios:
-        return (
-          'Instalar o BovControl Pro',
-          'No iPhone/iPad, toque no botão Compartilhar (⇪) e selecione '
-          '"Adicionar à Tela de Início".',
-        );
-      case _InstallTarget.linux:
-        return (
-          'Instalar o BovControl Pro',
-          'No Linux, use o menu do navegador e selecione '
-          '"Instalar BovControl Pro" para criar um atalho no ambiente gráfico.',
-        );
-      case _InstallTarget.other:
-        return (
-          'Instalar o BovControl Pro',
-          'Use a opção de instalação do seu navegador para adicionar o app '
-          'à tela inicial ou área de trabalho.',
-        );
-    }
-  }
-
-  Future<void> _install() async {
-    final accepted = triggerInstallPrompt();
-    if (mounted) {
-      if (accepted) {
-        await _dismiss(true);
-      } else {
-        setState(() => _canInstall = false);
-      }
-    }
+  (String, String) _manualGuide() {
+    return (
+      'Adicionar ao iPhone / iPad',
+      'No Safari, toque em Compartilhar, escolha '
+      '"Adicionar à Tela de Início" e confirme em Adicionar.',
+    );
   }
 }
-

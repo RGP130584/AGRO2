@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import '../../../core/widgets/pwa_install_button.dart';
 import '../services/auth_service.dart';
 import '../../home/views/home_view.dart';
 import 'cadastro_view.dart';
@@ -25,6 +26,11 @@ class _LoginViewState extends ConsumerState<LoginView> {
     filter: {"#": RegExp(r'[0-9]')},
     type: MaskAutoCompletionType.lazy,
   );
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -93,6 +99,13 @@ class _LoginViewState extends ConsumerState<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('AGRO Pecuária'),
+        centerTitle: false,
+        actions: const [
+          PwaInstallButton(),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

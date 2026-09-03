@@ -3,21 +3,36 @@ import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// Helper global definido em `web/index.html` que verifica se o evento
-/// `beforeinstallprompt` está pendente (Chrome/Edge; Windows, Linux e Android).
 @JS('window.__canInstallPwa')
 external bool _jsCanInstallPwa();
 
-/// Helper global definido em `web/index.html` que dispara a caixa de
-/// instalação nativa do navegador. Retorna `true` se foi exibida.
 @JS('window.__triggerInstallPrompt')
 external bool _jsTriggerInstallPrompt();
+
+@JS('window.__isStandalone')
+external bool _jsIsStandalone();
 
 @JS('navigator.userAgent')
 external JSString get _jsNavigatorUserAgent;
 
-/// Aguarda (até [timeout]) pela disponibilidade do evento
-/// `beforeinstallprompt`. Retorna `true` se o PWA pode ser instalado.
+bool canInstallPwa() {
+  if (!kIsWeb) return false;
+  try {
+    return _jsCanInstallPwa();
+  } catch (_) {
+    return false;
+  }
+}
+
+bool isStandalone() {
+  if (!kIsWeb) return false;
+  try {
+    return _jsIsStandalone();
+  } catch (_) {
+    return false;
+  }
+}
+
 Future<bool> waitBeforeInstallPrompt({
   Duration timeout = const Duration(seconds: 2),
 }) async {
@@ -38,8 +53,6 @@ Future<bool> waitBeforeInstallPrompt({
   }
 }
 
-/// Dispara a caixa de instalação nativa do navegador. Retorna `true` se foi
-/// exibida com sucesso.
 bool triggerInstallPrompt() {
   if (!kIsWeb) return false;
   try {
@@ -49,7 +62,6 @@ bool triggerInstallPrompt() {
   }
 }
 
-/// Retorna o `userAgent` do navegador, ou `null` quando indisponível.
 String? getUserAgent() {
   if (!kIsWeb) return null;
   try {

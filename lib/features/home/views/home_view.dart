@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/pwa_install_button.dart';
 import '../../rebanho/views/fazenda_list_view.dart';
 import '../../estoque/views/estoque_view.dart';
 import '../../saude/views/saude_view.dart';
@@ -12,11 +13,16 @@ import '../../auth/services/auth_service.dart';
 import '../../equipe/views/equipe_view.dart';
 import '../../equipe/views/meus_veterinarios_view.dart';
 
-class HomeView extends ConsumerWidget {
+class HomeView extends ConsumerStatefulWidget {
   const HomeView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends ConsumerState<HomeView> {
+  @override
+  Widget build(BuildContext context) {
     final conflictsAsync = ref.watch(conflictsProvider);
     final hasConflicts = conflictsAsync.valueOrNull?.isNotEmpty ?? false;
     final currentUser = ref.watch(authStateProvider);
@@ -27,6 +33,7 @@ class HomeView extends ConsumerWidget {
         title: const Text('AGRO Pecuária'),
         centerTitle: false,
         actions: [
+          const PwaInstallButton(),
           if (isProprietario) ...[
             IconButton(
               icon: const Icon(Icons.medical_services_outlined),
