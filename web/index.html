@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Sistema completo de gestão pecuária inteligente para controle de rebanho, manejo, financeiro e rastreabilidade.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="BovControl">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Android / PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <title>BovControl Pro</title>
+</head>
+<body>
+  <script>
+    // ===== PWA install prompt capture =====
+    // Salva o evento beforeinstallprompt e expõe helpers globais que o
+    // Flutter poderá chamar via dart:js_interop.
+    window.__deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__deferredPrompt = e;
+    });
+
+    window.__canInstallPwa = function () {
+      return window.__deferredPrompt != null;
+    };
+
+    window.__triggerInstallPrompt = function () {
+      var prompt = window.__deferredPrompt;
+      if (!prompt) return false;
+      prompt.prompt();
+      window.__deferredPrompt = null;
+      return true;
+    };
+
+    // ===== Register service worker for PWA installability =====
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (err) {
+          console.error('Erro ao registrar service worker:', err);
+        });
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
