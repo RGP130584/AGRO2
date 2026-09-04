@@ -30,7 +30,7 @@ class _SplashViewState extends ConsumerState<SplashView> {
       if (user != null) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeView()));
       } else {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginView()));
+        Navigator.pushReplacement(context, MaterialPageRoute(settings: const RouteSettings(name: 'login'), builder: (_) => const LoginView()));
       }
     }
   }
