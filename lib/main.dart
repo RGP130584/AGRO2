@@ -44,9 +44,13 @@ class InstallPromptObserver extends NavigatorObserver {
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    // Dispara apenas na 1ª navegação não-diálogo (Splash para Login/Home).
     final isDialog = route is DialogRoute || route is PopupRoute;
     if (_fired || isDialog) return;
+    // Pula a rota inicial (SplashView) — previousRoute == null indica a
+    // primeira rota empurrada pelo Navigator. Se dispararmos o modal aqui,
+    // o pushReplacement do Splash (após 2 s) vai substituir o modal que
+    // está no topo da pilha, fazendo-o sumir "sozinho".
+    if (previousRoute == null) return;
     final nav = navigator;
     if (nav == null) return;
     _fired = true;
