@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="22" fill="#15803d"/>
+  <path d="M50 20 C35 20 25 35 25 50 C25 65 35 78 50 82 C65 78 75 65 75 50 C75 35 65 20 50 20 Z" fill="#22c55e" opacity="0.3"/>
+  <!-- Cow/Bull & Leaf silhouette -->
+  <path d="M30 42 C30 32 40 32 50 35 C60 32 70 32 70 42 C70 54 62 68 50 75 C38 68 30 54 30 42 Z" fill="#ffffff"/>
+  <circle cx="42" cy="46" r="3.5" fill="#15803d"/>
+  <circle cx="58" cy="46" r="3.5" fill="#15803d"/>
+  <path d="M45 56 C47 58 53 58 55 56" stroke="#15803d" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Horns -->
+  <path d="M32 36 C24 30 22 22 28 20 C32 26 36 32 36 34" fill="#f59e0b"/>
+  <path d="M68 36 C76 30 78 22 72 20 C68 26 64 32 64 34" fill="#f59e0b"/>
+</svg>

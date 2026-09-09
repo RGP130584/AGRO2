@@ -21,37 +21,25 @@
 
 **Objetivo:** criar o esqueleto do app multiplataforma.
 
-1.1. Criar projeto Flutter (recomendado por maturidade em apps offline-first e único codebase Android/iOS).
-1.2. Estrutura de pastas sugerida:
+1.1. Criar projeto PWA em React 19 + Vite + Dexie.js (`agro2`) para operação offline-first multiplataforma (Web, Android, iOS, Windows).
+1.2. Estrutura de pastas da aplicação `agro2`:
 
 ```
-lib/
-  core/            # tema, constantes, utils, roteamento
-  data/
-    local/         # banco local (sqlite/drift), DAOs
-    remote/        # cliente API, DTOs
-    repositories/  # ponte entre local e remoto (regra de sync mora aqui)
-  domain/
-    models/        # entidades de negócio (Animal, Lote, AplicacaoSanitaria, Dieta...)
-  features/
-    dashboard/
-    rebanho/       # cadastro de animais e lotes
-    saude_animal/  # vacinas, medicações, carência
-    nutricao/      # dietas
-    pesagem/
-    estoque/
-    financeiro/
-    relatorios/
-    configuracoes/
-    sync/
-  main.dart
+agro2/
+  src/
+    components/     # UI, modais, layout, onboarding, badge de carência
+    contexts/       # AuthContext e SyncContext (sincronização offline)
+    db/             # Schema Dexie (Agro2DB - IndexedDB local) e seed
+    pages/          # Módulos (Rebanho, Saúde, Nutrição, Pesagem, Estoque, Financeiro, Relatórios, Sync)
+    utils/          # Helpers de carência, GMD, datas e imagem
+  public/           # sw.js (Service Worker), manifest.webmanifest e favicons
 ```
 
-1.3. Adicionar dependências base: banco local (`drift` ou `sqflite`), gerenciamento de estado (`riverpod` ou `bloc`), conectividade (`connectivity_plus`), fila de sincronização (implementação própria sobre o banco local).
+1.3. Dependências base: `dexie`, `react`, `react-dom`, `@vitejs/plugin-react`, `lucide-react`, `canvas-confetti`.
 
-> Prompt: "Crie um projeto Flutter com a estrutura de pastas acima, configure drift como banco local e riverpod para gerenciamento de estado. Não implemente telas ainda, apenas o esqueleto."
+> Prompt: "Crie a aplicação PWA em React 19 com Vite e Dexie.js como banco local IndexedDB. Estruture a pasta agro2 com a arquitetura offline-first."
 
-**Pronto quando:** projeto compila e roda em emulador Android e iOS mostrando uma tela em branco com o nome do app.
+**Pronto quando:** a aplicação PWA compila, roda no navegador e permite instalação offline.
 
 ---
 
@@ -202,7 +190,7 @@ sync_status (pending | synced | conflict)
 
 ---
 
-## [ ] Passo 9 — Backend mínimo de apoio
+## [x] Passo 9 — Backend mínimo de apoio
 
 **Objetivo:** existir um servidor simples o suficiente para validar a sincronização de ponta a ponta.
 
@@ -217,7 +205,7 @@ sync_status (pending | synced | conflict)
 
 ---
 
-## [ ] Passo 10 — UX para público de baixa familiaridade digital (transversal)
+## [x] Passo 10 — UX para público de baixa familiaridade digital (transversal)
 
 **Objetivo:** aplicar, em todas as telas já construídas, os princípios de usabilidade do manual — não é uma tela nova, é uma revisão.
 
