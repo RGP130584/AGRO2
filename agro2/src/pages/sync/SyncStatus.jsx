@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Wifi, WifiOff, CheckCircle2, Clock, ShieldCheck, Database } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, CheckCircle2, Clock, ShieldCheck, Database, Download, Upload, HardDrive } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import { formatarData } from '../../utils/formatters.js';
+import { exportarBackupLocal, importarBackupLocal } from '../../utils/backupHelper.js';
 
 export default function SyncStatus() {
   const { isOnline, pendingCount, isSyncing, lastSyncTime, syncError, syncNow } = useSync();
   const [eventosFila, setEventosFila] = useState([]);
-  const [stats, setStats] = useState({ animais: 0, aplicacoes: 0, pesagens: 0 });
+  const [stats, setStats] = useState({ animais: 0, aplicacoes: 0, pesagens: 0, usuarios: 0 });
   const [loading, setLoading] = useState(true);
+  const [backupMsg, setBackupMsg] = useState('');
 
   useEffect(() => {
     carregarFila();
@@ -16,14 +18,15 @@ export default function SyncStatus() {
 
   async function carregarFila() {
     try {
-      const [fila, cAnimais, cAplicacoes, cPesagens] = await Promise.all([
+      const [fila, cAnimais, cAplicacoes, cPesagens, cUsuarios] = await Promise.all([
         db.sync_queue.reverse().limit(30).toArray(),
         db.animais.count(),
         db.aplicacoes_sanitarias.count(),
-        db.pesagens.count()
+        db.pesagens.count(),
+        db.usuarios.count()
       ]);
       setEventosFila(fila);
-      setStats({ animais: cAnimais, aplicacoes: cAplicacoes, pesagens: cPesagens });
+      setStats({ animais: cAnimais, aplicacoes: cAplicacoes, pesagens: cPesagens, usuarios: cUsuarios });
     } catch (e) {
       console.error('Erro ao carregar fila:', e);
     } finally {
@@ -31,13 +34,49 @@ export default function SyncStatus() {
     }
   }
 
+  const handleExportarBackup = async () => {
+    try {
+      setBackupMsg('Gerando cópia de segurança em arquivo JSON...');
+      await exportarBackupLocal();
+      setBackupMsg('✅ Backup exportado com sucesso! Arquivo salvo no seu dispositivo.');
+      setTimeout(() => setBackupMsg(''), 4000);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao exportar arquivo de backup.');
+      setBackupMsg('');
+    }
+  };
+
+  const handleImportarBackup = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!window.confirm('⚠️ ATENÇÃO: Importar um backup irá restaurar todos os cadastros de animais, pesagens e usuários a partir do arquivo selecionado. Deseja continuar?')) {
+      return;
+    }
+
+    try {
+      setBackupMsg('Restaurando banco de dados a partir do backup...');
+      const text = await file.text();
+      await importarBackupLocal(text);
+      await carregarFila();
+      setBackupMsg('✅ Backup restaurado com sucesso!');
+      alert('✅ Banco de dados restaurado com sucesso! Todos os cadastros e usuários foram atualizados.');
+      setTimeout(() => setBackupMsg(''), 4000);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao importar arquivo de backup. Verifique se o arquivo JSON é válido.');
+      setBackupMsg('');
+    }
+  };
+
   return (
-    <div>
+    <div style={{ maxWidth: '100%', minWidth: 0, overflowX: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '20px' }}>Motor de Sincronização & Persistência Offline</h2>
+          <h2 style={{ fontSize: '20px' }}>Motor de Sincronização & Proteção de Dados</h2>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Fila outbox de transações locais e espelhamento com servidor central
+            Garantia de persistência total dos animais, usuários e fila outbox de transações
           </p>
         </div>
 
@@ -98,12 +137,56 @@ export default function SyncStatus() {
 
         <div className="kpi-card">
           <div className="kpi-info">
-            <div className="kpi-label">Banco Local IndexedDB</div>
-            <div className="kpi-value">{stats.animais + stats.aplicacoes + stats.pesagens} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>regs</span></div>
+            <div className="kpi-label">Base Local Protegida</div>
+            <div className="kpi-value">{stats.animais} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>animais</span></div>
           </div>
           <div className="kpi-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
             <Database size={24} />
           </div>
+        </div>
+      </div>
+
+      {/* PAINEL DE BACKUP & SEGURANÇA TOTAL DE DADOS */}
+      <div className="card" style={{ marginBottom: '24px', background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+        <div className="card-header" style={{ marginBottom: '10px' }}>
+          <h4 className="card-title">
+            <HardDrive size={18} color="#15803d" />
+            <span>Cópia de Segurança Local (Backup 100% Garantido)</span>
+          </h4>
+        </div>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Baixe um arquivo de backup em JSON a qualquer momento com todos os cadastros de animais, usuários, vacinas e pesagens. Nenhuma informação será perdida.
+        </p>
+
+        {backupMsg && (
+          <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#dcfce7', color: '#15803d', fontWeight: 600, fontSize: '13px', marginBottom: '14px' }}>
+            {backupMsg}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleExportarBackup}
+            className="btn btn-primary btn-sm"
+            style={{ flex: '1 1 auto', justifyContent: 'center' }}
+          >
+            <Download size={16} />
+            <span>Exportar Backup (Baixar JSON)</span>
+          </button>
+
+          <label
+            className="btn btn-secondary btn-sm"
+            style={{ flex: '1 1 auto', justifyContent: 'center', cursor: 'pointer', margin: 0 }}
+          >
+            <Upload size={16} />
+            <span>Restaurar Backup (Carregar JSON)</span>
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImportarBackup}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
       </div>
 
@@ -167,3 +250,4 @@ export default function SyncStatus() {
     </div>
   );
 }
+

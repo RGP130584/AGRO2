@@ -3,8 +3,17 @@ import { db, requestPersistentStorage } from './database.js';
 export async function seedDatabaseIfEmpty() {
   await requestPersistentStorage();
   
-  const userCount = await db.usuarios.count();
-  if (userCount > 0) return; // Já possui dados
+  const [userCount, animalCount, fazendaCount, loteCount] = await Promise.all([
+    db.usuarios.count(),
+    db.animais.count(),
+    db.fazendas.count(),
+    db.lotes.count()
+  ]);
+  
+  // Garantia Absoluta: Se existir qualquer dado em qualquer tabela, NUNCA executar o seed
+  if (userCount > 0 || animalCount > 0 || fazendaCount > 0 || loteCount > 0) {
+    return;
+  }
 
   console.log('[Seed] Inicializando base de demonstração Agro 2...');
 
