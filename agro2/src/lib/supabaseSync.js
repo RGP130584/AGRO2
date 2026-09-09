@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { db } from '../db/database.js';
+import { getActiveFazendaId } from '../utils/fazendaHelper.js';
 
 export const TABLES_TO_SYNC = [
   'usuarios',
@@ -60,10 +61,13 @@ export function subscribeToRealtimeSync() {
 
 /**
  * Envia todos os eventos pendentes locais para o Supabase
- * APENAS marca como 'synced' se NÃO houver erro retornado pelo Supabase.
+ * E executa reconciliação de registros locais que estejam ausentes na nuvem
  */
 export async function pushSyncToSupabase() {
   try {
+    const activeFazendaId = await getActiveFazendaId();
+
+    // 1. Processa a outbox pendente (sync_queue)
     const pendingEvents = await db.sync_queue.where('status').equals('pending').toArray();
     for (const ev of pendingEvents) {
       if (ev.entidade && TABLES_TO_SYNC.includes(ev.entidade)) {
@@ -74,6 +78,9 @@ export async function pushSyncToSupabase() {
           } else if (ev.payload) {
             const cleanPayload = { ...ev.payload };
             delete cleanPayload.sync_status;
+            if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
+              cleanPayload.fazenda_id = activeFazendaId;
+            }
             ({ error } = await supabase.from(ev.entidade).upsert(cleanPayload));
           }
         } catch (subErr) {
@@ -86,7 +93,7 @@ export async function pushSyncToSupabase() {
             status: 'error',
             error_msg: error.message || String(error)
           });
-          continue; // Não marca como synced se houver erro!
+          continue;
         }
       }
 
@@ -95,17 +102,46 @@ export async function pushSyncToSupabase() {
         synced_at: new Date().toISOString()
       });
     }
+
+    // 2. Reconciliação Local -> Nuvem: Puxa todos os registros das tabelas locais
+    // Se o registro não estiver marcado como 'synced' ou se for um registro antigo, envia para o Supabase
+    for (const tableName of TABLES_TO_SYNC) {
+      if (!db[tableName]) continue;
+      try {
+        const localItems = await db[tableName].toArray();
+        for (const item of localItems) {
+          if (item && item.id && item.sync_status !== 'synced') {
+            const cleanPayload = { ...item };
+            delete cleanPayload.sync_status;
+            if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
+              cleanPayload.fazenda_id = activeFazendaId;
+            }
+            const { error } = await supabase.from(tableName).upsert(cleanPayload);
+            if (!error) {
+              await db[tableName].update(item.id, {
+                fazenda_id: cleanPayload.fazenda_id || item.fazenda_id,
+                sync_status: 'synced'
+              });
+            }
+          }
+        }
+      } catch (recErr) {
+        console.warn(`[Reconciliation Push Exception] ${tableName}:`, recErr.message);
+      }
+    }
   } catch (err) {
     console.error('[Supabase Push Error]:', err);
   }
 }
 
 /**
- * Puxa todos os dados do Supabase para o IndexedDB local e notifica a interface
+ * Puxa todos os dados do Supabase para o IndexedDB local e alinha registros legados
  */
 export async function pullSyncFromSupabase() {
   try {
+    const activeFazendaId = await getActiveFazendaId();
     let hasChanges = false;
+
     for (const tableName of TABLES_TO_SYNC) {
       try {
         const { data, error } = await supabase.from(tableName).select('*');
@@ -115,13 +151,66 @@ export async function pullSyncFromSupabase() {
         }
 
         if (Array.isArray(data) && data.length > 0) {
+          const supabaseIds = new Set(data.map((d) => d.id));
+
           for (const item of data) {
             if (item && item.id && db[tableName]) {
+              let targetFazendaId = item.fazenda_id;
+              // Normaliza a fazenda de registros legados criados sob IDs antigos
+              if (targetFazendaId && activeFazendaId && activeFazendaId !== 'faz-1' && targetFazendaId !== activeFazendaId) {
+                targetFazendaId = activeFazendaId;
+                // Atualiza também no Supabase para sincronizar a nuvem
+                supabase.from(tableName).update({ fazenda_id: activeFazendaId }).eq('id', item.id);
+              }
+
               await db[tableName].put({
                 ...item,
+                fazenda_id: targetFazendaId || item.fazenda_id,
                 sync_status: 'synced'
               });
               hasChanges = true;
+            }
+          }
+
+          // Se existir algum registro no IndexedDB local que NÃO está na nuvem (legado preso), sobe ele agora
+          if (db[tableName]) {
+            const localItems = await db[tableName].toArray();
+            for (const localItem of localItems) {
+              if (localItem && localItem.id && !supabaseIds.has(localItem.id)) {
+                const cleanPayload = { ...localItem };
+                delete cleanPayload.sync_status;
+                if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
+                  cleanPayload.fazenda_id = activeFazendaId;
+                }
+                const { error: pushLegacyErr } = await supabase.from(tableName).upsert(cleanPayload);
+                if (!pushLegacyErr) {
+                  await db[tableName].update(localItem.id, {
+                    fazenda_id: cleanPayload.fazenda_id || localItem.fazenda_id,
+                    sync_status: 'synced'
+                  });
+                  hasChanges = true;
+                }
+              }
+            }
+          }
+        } else if (db[tableName]) {
+          // Se o Supabase estiver vazio nessa tabela mas o IndexedDB local tiver dados legados, sobe tudo
+          const localItems = await db[tableName].toArray();
+          for (const localItem of localItems) {
+            if (localItem && localItem.id) {
+              const cleanPayload = { ...localItem };
+              delete cleanPayload.sync_status;
+              if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
+                cleanPayload.fazenda_id = activeFazendaId;
+              }
+              const { error: pushLegacyErr } = await supabase.from(tableName).upsert(cleanPayload);
+              if (!pushLegacyErr) {
+                await db[tableName].update(localItem.id, {
+                  fazenda_id: cleanPayload.fazenda_id || localItem.fazenda_id,
+                  sync_status: 'synced'
+                });
+                hasChanges = true;
+              }
             }
           }
         }
@@ -137,3 +226,4 @@ export async function pullSyncFromSupabase() {
     console.error('[Supabase Pull Error]:', err);
   }
 }
+
