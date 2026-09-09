@@ -85,23 +85,34 @@ export function SyncProvider({ children }) {
 
       const token = localStorage.getItem('agro2_token') || 'demo-token';
 
-      // Tenta conexão remota com o backend SaaS
-      let data = null;
+      // 1. Tenta sincronização com Supabase (Nuvem compartilhada entre Celular e PC)
       try {
-        const response = await fetch(`${API_BASE_URL}/v1/sync`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ outbox, lastSyncAt }),
-        });
+        const { pushSyncToSupabase, pullSyncFromSupabase } = await import('../lib/supabaseSync.js');
+        await pushSyncToSupabase();
+        await pullSyncFromSupabase();
+      } catch (sbErr) {
+        console.log('[Sync Supabase] Fallback local ativo:', sbErr.message);
+      }
 
-        if (response.ok) {
-          data = await response.json();
+      // 2. Tenta conexão remota com o backend SaaS tradicional (se houver VITE_API_URL)
+      let data = null;
+      if (API_BASE_URL) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/v1/sync`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ outbox, lastSyncAt }),
+          });
+
+          if (response.ok) {
+            data = await response.json();
+          }
+        } catch (netErr) {
+          console.log('[Sync Local Standalone] Servidor remoto ausente. Consolidando localmente.');
         }
-      } catch (netErr) {
-        console.log('[Sync Local Standalone] Servidor remoto ausente. Consolidando localmente no aparelho.');
       }
 
       if (data && Array.isArray(data.results)) {
@@ -143,7 +154,7 @@ export function SyncProvider({ children }) {
           }
         }
       } else {
-        // Modo Standalone Local (Consolida a outbox diretamente no banco IndexedDB)
+        // Consolida a outbox localmente caso o backend REST não esteja configurado
         for (const ev of pendingEvents) {
           await db.sync_queue.update(ev.id, {
             status: 'synced',

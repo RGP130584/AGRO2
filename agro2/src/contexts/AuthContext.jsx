@@ -30,9 +30,31 @@ export function AuthProvider({ children }) {
 
   const login = async (email, senha) => {
     const cleanEmail = (email || '').trim().toLowerCase();
-    const userFound = await db.usuarios
+    
+    // 1. Procura localmente no IndexedDB
+    let userFound = await db.usuarios
       .filter((u) => u.email.toLowerCase() === cleanEmail && u.senha === senha && u.ativo)
       .first();
+
+    // 2. Se não encontrou no aparelho, tenta buscar na nuvem (Supabase)
+    if (!userFound) {
+      try {
+        const { supabase } = await import('../lib/supabase.js');
+        const { data, error } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('email', cleanEmail)
+          .eq('senha', senha)
+          .maybeSingle();
+
+        if (data && !error) {
+          userFound = data;
+          await db.usuarios.put(data); // Salva no IndexedDB local para acesso offline
+        }
+      } catch (err) {
+        console.warn('[Auth Supabase Login Error]:', err.message);
+      }
+    }
 
     if (!userFound) {
       throw new Error('E-mail ou senha incorretos.');
@@ -45,6 +67,8 @@ export function AuthProvider({ children }) {
 
   const registerUser = async ({ nome, email, senha, perfil = 'proprietario', fazendaNome }) => {
     const cleanEmail = (email || '').trim().toLowerCase();
+    
+    // Verifica duplicidade local
     const existing = await db.usuarios.filter((u) => u.email.toLowerCase() === cleanEmail).first();
     if (existing) {
       throw new Error('Já existe um usuário cadastrado com este e-mail.');
@@ -60,18 +84,33 @@ export function AuthProvider({ children }) {
       created_at: new Date().toISOString()
     };
 
+    // Salva localmente
     await db.usuarios.add(newUser);
 
+    // Envia para o Supabase (Nuvem)
+    try {
+      const { supabase } = await import('../lib/supabase.js');
+      await supabase.from('usuarios').upsert(newUser);
+    } catch (err) {
+      console.warn('[Auth Supabase Register User Error]:', err.message);
+    }
+
     if (fazendaNome && fazendaNome.trim()) {
-      const existingFaz = await db.fazendas.toCollection().first();
-      if (!existingFaz) {
-        await db.fazendas.add({
-          id: `faz-${Date.now()}`,
-          nome: fazendaNome.trim(),
-          proprietario_nome: nome.trim(),
-          sync_status: 'pending',
-          created_at: new Date().toISOString()
-        });
+      const newFazenda = {
+        id: `faz-${Date.now()}`,
+        nome: fazendaNome.trim(),
+        proprietario_nome: nome.trim(),
+        sync_status: 'synced',
+        created_at: new Date().toISOString()
+      };
+      
+      await db.fazendas.add(newFazenda);
+
+      try {
+        const { supabase } = await import('../lib/supabase.js');
+        await supabase.from('fazendas').upsert(newFazenda);
+      } catch (err) {
+        console.warn('[Auth Supabase Register Fazenda Error]:', err.message);
       }
     }
 
