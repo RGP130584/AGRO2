@@ -187,10 +187,7 @@ export default function Login() {
               marginBottom: '16px'
             }}
           >
-            <div>{error}</div>
-            <div style={{ fontSize: '12px', marginTop: '6px', color: '#991b1b' }}>
-              💡 Se este é seu primeiro acesso neste aparelho, clique na aba <strong>"Primeiro Acesso"</strong> acima para criar sua conta.
-            </div>
+            {error}
           </div>
         )}
 
@@ -230,24 +227,6 @@ export default function Login() {
               <span>{loading ? 'Entrando...' : 'Entrar no Sistema'}</span>
               <ArrowRight size={18} />
             </button>
-
-            {/* Acesso Rápido de Demonstração */}
-            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
-                Ou acesse com os dados de demonstração:
-              </div>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  setEmail('admin@agro.com');
-                  setSenha('123');
-                }}
-                style={{ width: '100%', fontSize: '12px', justifyContent: 'center' }}
-              >
-                🔑 Entrar como Admin (admin@agro.com / 123)
-              </button>
-            </div>
           </form>
         ) : (
           /* Formulário de Primeiro Acesso / Cadastro */
