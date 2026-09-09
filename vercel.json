@@ -3,6 +3,10 @@
   "outputDirectory": "agro2/dist",
   "rewrites": [
     {
+      "source": "/v1/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

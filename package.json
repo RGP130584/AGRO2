@@ -1,0 +1,19 @@
+{
+  "name": "agro-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd agro2 && npm install && npm run build"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.3",
+    "sqlite3": "^6.0.1",
+    "uuid": "^14.0.2",
+    "zod": "^4.5.1"
+  }
+}

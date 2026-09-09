@@ -3,7 +3,7 @@ import { db } from '../db/database.js';
 
 const SyncContext = createContext();
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:3000');
 
 function getDeviceId() {
   let devId = localStorage.getItem('agro2_device_id');

@@ -9,7 +9,9 @@ const path = require('path');
 
 const dbFile = process.env.NODE_ENV === 'test'
   ? ':memory:'
-  : path.resolve(__dirname, '..', process.env.DB_FILE || 'backend.db');
+  : (process.env.VERCEL
+      ? '/tmp/backend.db'
+      : path.resolve(__dirname, '..', process.env.DB_FILE || 'backend.db'));
 
 const db = new sqlite3.Database(dbFile, (err) => {
   if (err) {
