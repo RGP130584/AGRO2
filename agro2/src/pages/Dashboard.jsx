@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { db } from '../db/database.js';
 import BadgeCarencia from '../components/BadgeCarencia.jsx';
+import InstallPrompt from '../components/InstallPrompt.jsx';
 import { formatarNumero, formatarData } from '../utils/formatters.js';
 
 export default function Dashboard({ onNavigate }) {
@@ -94,6 +95,8 @@ export default function Dashboard({ onNavigate }) {
 
   return (
     <div style={{ maxWidth: '100%', minWidth: 0, overflowX: 'hidden' }}>
+      {/* Banner Elegante de Instalação PWA (Dispensável) */}
+      <InstallPrompt />
       {/* Abas de Seleção de Espécie (Mobile-First Wrap) */}
       <div style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

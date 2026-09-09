@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Smartphone, X, Share2, PlusSquare } from 'lucide-react';
+import { Smartphone, X, Share2, PlusSquare } from 'lucide-react';
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [isIos, setIsIos] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalledOrDismissed, setIsInstalledOrDismissed] = useState(true);
 
   useEffect(() => {
-    // Check if already installed / standalone
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-      setIsInstalled(true);
+    // 1. Checar se já está rodando como PWA instalado (Standalone) ou se o usuário dispensou o aviso
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isDismissed = localStorage.getItem('agro2_pwa_dismissed') === 'true';
+
+    if (isStandalone || isDismissed) {
+      setIsInstalledOrDismissed(true);
       return;
     }
 
-    // Check iOS Safari
+    setIsInstalledOrDismissed(false);
+
+    // Checar iOS Safari
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIos(isIosDevice);
@@ -25,7 +30,6 @@ export default function InstallPrompt() {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -36,32 +40,67 @@ export default function InstallPrompt() {
       deferredPrompt.prompt();
       const choiceResult = await deferredPrompt.userChoice;
       if (choiceResult.outcome === 'accepted') {
-        setDeferredPrompt(null);
+        localStorage.setItem('agro2_pwa_dismissed', 'true');
+        setIsInstalledOrDismissed(true);
       }
     } else if (isIos) {
       setShowIosGuide(true);
     } else {
-      alert('Para instalar, abra o menu do navegador e selecione "Instalar aplicativo" ou "Adicionar à tela inicial".');
+      alert('Para instalar, abra o menu do seu navegador e escolha "Instalar aplicativo" ou "Adicionar à tela inicial".');
     }
   };
 
-  if (isInstalled) return null;
+  const handleDismiss = () => {
+    localStorage.setItem('agro2_pwa_dismissed', 'true');
+    setIsInstalledOrDismissed(true);
+  };
+
+  if (isInstalledOrDismissed) return null;
 
   return (
     <>
-      <button
-        onClick={handleInstallClick}
-        className="btn btn-sm"
+      <div
         style={{
           background: 'linear-gradient(135deg, #15803d, #166534)',
           color: 'white',
-          boxShadow: '0 2px 8px rgba(21, 128, 61, 0.3)'
+          borderRadius: 'var(--radius-lg)',
+          padding: '12px 16px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          boxShadow: '0 4px 12px rgba(21, 128, 61, 0.25)',
+          flexWrap: 'wrap'
         }}
-        title="Instalar Agro 2 no Celular ou Computador"
       >
-        <Smartphone size={15} />
-        <span>Instalar App</span>
-      </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '10px' }}>
+            <Smartphone size={20} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '14px' }}>Instalar o AGRO 2 no Celular</div>
+            <div style={{ fontSize: '12px', opacity: 0.9 }}>Use 100% offline no campo com ícone na tela inicial</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+          <button
+            onClick={handleInstallClick}
+            className="btn btn-sm"
+            style={{ background: '#ffffff', color: '#15803d', fontWeight: 700, border: 'none' }}
+          >
+            Instalar App
+          </button>
+          <button
+            onClick={handleDismiss}
+            style={{ background: 'transparent', border: 'none', color: 'white', padding: '4px', cursor: 'pointer' }}
+            title="Não mostrar novamente"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
 
       {showIosGuide && (
         <div className="modal-overlay" onClick={() => setShowIosGuide(false)}>

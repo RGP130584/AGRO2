@@ -77,8 +77,6 @@ export default function Header({ pageTitle, onToggleSidebar }) {
           )}
         </button>
 
-        {/* PWA Install Button */}
-        <InstallPrompt />
 
         {/* Informações do Usuário & Logout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid var(--border)', paddingLeft: '12px' }}>
