@@ -106,7 +106,6 @@ export function SyncProvider({ children }) {
       }
 
       // 2. Tenta conexão remota com o backend SaaS tradicional (se houver VITE_API_URL)
-      let data = null;
       if (API_BASE_URL) {
         try {
           const response = await fetch(`${API_BASE_URL}/v1/sync`, {
@@ -119,64 +118,48 @@ export function SyncProvider({ children }) {
           });
 
           if (response.ok) {
-            data = await response.json();
-          }
-        } catch (netErr) {
-          console.log('[Sync Local Standalone] Servidor remoto ausente. Consolidando localmente.');
-        }
-      }
+            const data = await response.json();
+            if (data && Array.isArray(data.results)) {
+              for (const resItem of data.results) {
+                const queueItem = pendingEvents.find((e) => e.id === resItem.id);
+                if (queueItem) {
+                  await db.sync_queue.update(resItem.id, {
+                    status: resItem.status,
+                    server_id: resItem.serverId,
+                    synced_at: new Date().toISOString(),
+                  });
 
-      if (data && Array.isArray(data.results)) {
-        // Modo Conectado com Backend
-        for (const resItem of data.results) {
-          const queueItem = pendingEvents.find((e) => e.id === resItem.id);
-          if (queueItem) {
-            await db.sync_queue.update(resItem.id, {
-              status: resItem.status,
-              server_id: resItem.serverId,
-              synced_at: new Date().toISOString(),
-            });
+                  if (db[queueItem.entidade] && queueItem.entidade_id) {
+                    await db[queueItem.entidade].update(queueItem.entidade_id, {
+                      sync_status: resItem.status,
+                      server_id: resItem.serverId,
+                    });
+                  }
+                }
+              }
 
-            if (db[queueItem.entidade] && queueItem.entidade_id) {
-              await db[queueItem.entidade].update(queueItem.entidade_id, {
-                sync_status: resItem.status,
-                server_id: resItem.serverId,
-              });
-            }
-          }
-        }
-
-        if (Array.isArray(data.changes)) {
-          for (const change of data.changes) {
-            const table = db[change.entityType];
-            if (table) {
-              if (change.deletedAt) {
-                await table.delete(change.entityId);
-              } else if (change.payload) {
-                await table.put({
-                  ...change.payload,
-                  id: change.entityId,
-                  sync_status: 'synced',
-                  server_id: change.serverId,
-                  updated_at: change.updatedAt,
-                });
+              if (Array.isArray(data.changes)) {
+                for (const change of data.changes) {
+                  const table = db[change.entityType];
+                  if (table) {
+                    if (change.deletedAt) {
+                      await table.delete(change.entityId);
+                    } else if (change.payload) {
+                      await table.put({
+                        ...change.payload,
+                        id: change.entityId,
+                        sync_status: 'synced',
+                        server_id: change.serverId,
+                        updated_at: change.updatedAt,
+                      });
+                    }
+                  }
+                }
               }
             }
           }
-        }
-      } else {
-        // Consolida a outbox localmente caso o backend REST não esteja configurado
-        for (const ev of pendingEvents) {
-          await db.sync_queue.update(ev.id, {
-            status: 'synced',
-            synced_at: new Date().toISOString(),
-          });
-
-          if (db[ev.entidade] && ev.entidade_id) {
-            await db[ev.entidade].update(ev.entidade_id, {
-              sync_status: 'synced',
-            });
-          }
+        } catch (netErr) {
+          console.log('[Sync Local Standalone] Servidor remoto REST ausente. Supabase mantém a sincronização.');
         }
       }
 

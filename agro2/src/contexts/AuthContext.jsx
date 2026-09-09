@@ -34,6 +34,19 @@ export function AuthProvider({ children }) {
             setUser(found);
           }
         }
+
+        // Garante que a fazenda vinculada esteja presente no IndexedDB local
+        try {
+          const { supabase } = await import('../lib/supabase.js');
+          const { data: fazendasData } = await supabase.from('fazendas').select('*');
+          if (Array.isArray(fazendasData) && fazendasData.length > 0) {
+            for (const f of fazendasData) {
+              await db.fazendas.put({ ...f, sync_status: 'synced' });
+            }
+          }
+        } catch (fErr) {
+          console.warn('[Supabase Init Fazendas Error]:', fErr.message);
+        }
       } catch (err) {
         console.error('Erro ao inicializar autenticação:', err);
       } finally {
@@ -73,6 +86,19 @@ export function AuthProvider({ children }) {
 
     if (!userFound) {
       throw new Error('E-mail ou senha incorretos.');
+    }
+
+    // Puxa as fazendas do Supabase para garantir que db.fazendas esteja populado no novo dispositivo
+    try {
+      const { supabase } = await import('../lib/supabase.js');
+      const { data: fazendasData } = await supabase.from('fazendas').select('*');
+      if (Array.isArray(fazendasData) && fazendasData.length > 0) {
+        for (const f of fazendasData) {
+          await db.fazendas.put({ ...f, sync_status: 'synced' });
+        }
+      }
+    } catch (err) {
+      console.warn('[Auth Login Fetch Fazendas Error]:', err.message);
     }
 
     setUser(userFound);

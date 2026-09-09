@@ -23,7 +23,7 @@ export default function RebanhoList({ onNovoAnimal, onVerDetalhe, onVerLotes }) 
   async function carregarDados() {
     try {
       const [listAnimais, listLotes] = await Promise.all([
-        db.animais.filter((a) => a.status === 'ativo').toArray(),
+        db.animais.filter((a) => !a.status || a.status === 'ativo').toArray(),
         db.lotes.toArray()
       ]);
       setAnimais(listAnimais);
