@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../db/database.js';
-import { seedDatabaseIfEmpty } from '../db/seed.js';
+import { clearDemoDataIfPresent } from '../db/clearDemo.js';
 
 const AuthContext = createContext();
 
@@ -11,10 +11,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function initAuth() {
       try {
-        await seedDatabaseIfEmpty();
+        await clearDemoDataIfPresent();
         const savedUserId = localStorage.getItem('agro2_current_user_id');
         if (savedUserId) {
-          const found = await db.usuarios.get(savedUserId);
+          let found = await db.usuarios.get(savedUserId);
+
+          if (!found) {
+            // Tenta buscar no Supabase
+            try {
+              const { supabase } = await import('../lib/supabase.js');
+              const { data } = await supabase.from('usuarios').select('*').eq('id', savedUserId).maybeSingle();
+              if (data) {
+                found = data;
+                await db.usuarios.put(data);
+              }
+            } catch (sbErr) {
+              console.warn('[Supabase Init User Error]:', sbErr.message);
+            }
+          }
+
           if (found && found.ativo) {
             setUser(found);
           }

@@ -60,30 +60,36 @@ export function subscribeToRealtimeSync() {
 
 /**
  * Envia todos os eventos pendentes locais para o Supabase
+ * APENAS marca como 'synced' se NÃO houver erro retornado pelo Supabase.
  */
 export async function pushSyncToSupabase() {
   try {
     const pendingEvents = await db.sync_queue.where('status').equals('pending').toArray();
     for (const ev of pendingEvents) {
       if (ev.entidade && TABLES_TO_SYNC.includes(ev.entidade)) {
+        let error = null;
         try {
           if (ev.acao === 'delete') {
-            await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id);
+            ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
           } else if (ev.payload) {
             const cleanPayload = { ...ev.payload };
             delete cleanPayload.sync_status;
-            
-            const { error } = await supabase.from(ev.entidade).upsert(cleanPayload);
-            if (error) {
-              console.warn(`[Supabase Push] Erro ao enviar ${ev.entidade}:`, error.message);
-            }
+            ({ error } = await supabase.from(ev.entidade).upsert(cleanPayload));
           }
         } catch (subErr) {
-          console.warn(`[Supabase Push] Exceção ao enviar ${ev.entidade}:`, subErr.message);
+          error = subErr;
+        }
+
+        if (error) {
+          console.error(`[Sync Error] ${ev.entidade} (${ev.acao}):`, error.message, error);
+          await db.sync_queue.update(ev.id, {
+            status: 'error',
+            error_msg: error.message || String(error)
+          });
+          continue; // Não marca como synced se houver erro!
         }
       }
-      
-      // Marca evento como sincronizado no local
+
       await db.sync_queue.update(ev.id, {
         status: 'synced',
         synced_at: new Date().toISOString()
@@ -103,7 +109,12 @@ export async function pullSyncFromSupabase() {
     for (const tableName of TABLES_TO_SYNC) {
       try {
         const { data, error } = await supabase.from(tableName).select('*');
-        if (!error && Array.isArray(data) && data.length > 0) {
+        if (error) {
+          console.error(`[Pull Error] ${tableName}:`, error.message, error);
+          continue;
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
           for (const item of data) {
             if (item && item.id && db[tableName]) {
               await db[tableName].put({
@@ -115,7 +126,7 @@ export async function pullSyncFromSupabase() {
           }
         }
       } catch (tableErr) {
-        console.warn(`[Supabase Pull] Tabela ${tableName}:`, tableErr.message);
+        console.warn(`[Supabase Pull Exception] ${tableName}:`, tableErr.message);
       }
     }
 
