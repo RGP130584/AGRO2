@@ -13,6 +13,9 @@ export default function SaudeDashboard({ onNovaAplicacao, onNovaOcorrencia, onVe
 
   useEffect(() => {
     carregarSaude();
+    const handleSyncUpdate = () => carregarSaude();
+    window.addEventListener('agro2_sync_updated', handleSyncUpdate);
+    return () => window.removeEventListener('agro2_sync_updated', handleSyncUpdate);
   }, []);
 
   async function carregarSaude() {

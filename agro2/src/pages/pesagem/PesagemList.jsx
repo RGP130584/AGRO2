@@ -11,6 +11,9 @@ export default function PesagemList({ onNovaPesagem, onVerAnimal }) {
 
   useEffect(() => {
     carregarPesagens();
+    const handleSyncUpdate = () => carregarPesagens();
+    window.addEventListener('agro2_sync_updated', handleSyncUpdate);
+    return () => window.removeEventListener('agro2_sync_updated', handleSyncUpdate);
   }, []);
 
   async function carregarPesagens() {

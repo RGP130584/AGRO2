@@ -97,7 +97,8 @@ export function SyncProvider({ children }) {
 
       // 1. Tenta sincronização com Supabase (Nuvem compartilhada entre Celular e PC)
       try {
-        const { pushSyncToSupabase, pullSyncFromSupabase } = await import('../lib/supabaseSync.js');
+        const { pushSyncToSupabase, pullSyncFromSupabase, subscribeToRealtimeSync } = await import('../lib/supabaseSync.js');
+        subscribeToRealtimeSync();
         await pushSyncToSupabase();
         await pullSyncFromSupabase();
       } catch (sbErr) {

@@ -3,6 +3,7 @@ import { ArrowLeft, Save, Wheat, AlertTriangle } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function FornecimentoForm({ onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -85,12 +86,13 @@ export default function FornecimentoForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = `forn-${Date.now()}`;
       const responsavel = user?.nome || 'Operador';
 
       const payload = {
         id,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         lote_id: form.lote_id,
         especie,
         dieta_id: form.dieta_id,
@@ -125,7 +127,7 @@ export default function FornecimentoForm({ onSalvo, onCancelar }) {
           const movId = `mov-${Date.now()}`;
           const movPayload = {
             id: movId,
-            fazenda_id: 'faz-1',
+            fazenda_id: activeFazId,
             produto_id: prod.id,
             tipo: 'saida',
             quantidade: qtdBaixaEstoque,

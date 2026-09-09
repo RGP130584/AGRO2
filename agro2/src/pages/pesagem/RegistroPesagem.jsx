@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import { calcularGMD, kgParaArroba } from '../../utils/gmdHelper.js';
 import { formatarNumero } from '../../utils/formatters.js';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -85,6 +86,7 @@ export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = `pes-${Date.now()}`;
       const responsavel = user?.nome || 'Operador';
 
@@ -92,7 +94,7 @@ export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }
         id,
         animal_id: form.animal_id,
         lote_id: animalSelecionado?.lote_id || '',
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         data: form.data,
         peso: pesoNovoNum,
         peso_anterior: animalSelecionado?.peso_atual || 0,

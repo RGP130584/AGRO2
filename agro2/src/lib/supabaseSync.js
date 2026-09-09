@@ -17,6 +17,47 @@ export const TABLES_TO_SYNC = [
   'financeiro_lancamentos'
 ];
 
+let realtimeChannel = null;
+
+/**
+ * Inscreve no canal WebSockets do Supabase para receber atualizações instantâneas de outros dispositivos
+ */
+export function subscribeToRealtimeSync() {
+  if (realtimeChannel) return;
+
+  try {
+    realtimeChannel = supabase
+      .channel('agro2-realtime-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        async (payload) => {
+          console.log('[Supabase Realtime Event]:', payload.eventType, payload.table);
+          if (payload.table && TABLES_TO_SYNC.includes(payload.table)) {
+            if (payload.eventType === 'DELETE' && payload.old && payload.old.id) {
+              if (db[payload.table]) {
+                await db[payload.table].delete(payload.old.id);
+              }
+            } else if (payload.new && payload.new.id) {
+              if (db[payload.table]) {
+                await db[payload.table].put({
+                  ...payload.new,
+                  sync_status: 'synced'
+                });
+              }
+            }
+            window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Supabase Realtime Status]:', status);
+      });
+  } catch (err) {
+    console.warn('[Supabase Realtime Error]:', err.message);
+  }
+}
+
 /**
  * Envia todos os eventos pendentes locais para o Supabase
  */

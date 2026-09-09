@@ -4,6 +4,7 @@ import { db } from '../../db/database.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import CameraCapture from '../../components/CameraCapture.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function OcorrenciaForm({ onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -59,12 +60,13 @@ export default function OcorrenciaForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = `oco-${Date.now()}`;
       const animalObj = await db.animais.get(form.animal_id);
 
       const payload = {
         id,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         animal_id: form.animal_id,
         lote_id: animalObj?.lote_id || '',
         tipo: form.tipo,

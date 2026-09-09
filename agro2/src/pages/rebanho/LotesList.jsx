@@ -10,6 +10,9 @@ export default function LotesList({ onVoltar, onNovoLote, onEditarLote }) {
 
   useEffect(() => {
     carregarLotes();
+    const handleSyncUpdate = () => carregarLotes();
+    window.addEventListener('agro2_sync_updated', handleSyncUpdate);
+    return () => window.removeEventListener('agro2_sync_updated', handleSyncUpdate);
   }, []);
 
   async function carregarLotes() {

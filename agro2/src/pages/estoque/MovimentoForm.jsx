@@ -3,6 +3,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function MovimentoForm({ onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export default function MovimentoForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const prod = await db.produtos.get(form.produto_id);
       if (!prod) return;
 
@@ -48,7 +50,7 @@ export default function MovimentoForm({ onSalvo, onCancelar }) {
       const movId = `mov-${Date.now()}`;
       const payloadMov = {
         id: movId,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         produto_id: prod.id,
         tipo: form.tipo,
         quantidade: qtd,
@@ -67,7 +69,7 @@ export default function MovimentoForm({ onSalvo, onCancelar }) {
         const finId = `fin-${Date.now()}`;
         const payloadFin = {
           id: finId,
-          fazenda_id: 'faz-1',
+          fazenda_id: activeFazId,
           tipo: 'pagar',
           categoria: 'Insumos / Estoque',
           descricao: `Compra: ${prod.nome} (${qtd} ${prod.unidade})`,

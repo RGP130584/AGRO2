@@ -6,6 +6,7 @@ import { useSync } from '../../contexts/SyncContext.jsx';
 import { calcularFimCarencia, statusCarencia } from '../../utils/carenciaHelper.js';
 import { formatarData } from '../../utils/formatters.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -167,6 +168,8 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
         setLoading(false);
         return;
       }
+      
+      const activeFazId = await getActiveFazendaId();
 
       // 1. Criar registro de aplicação para cada animal
       for (const animal of animaisAlvos) {
@@ -175,7 +178,7 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
           id: aplicacaoId,
           animal_id: animal.id,
           lote_id: animal.lote_id,
-          fazenda_id: 'faz-1',
+          fazenda_id: activeFazId,
           produto_id: form.produto_id,
           produto_nome: produtoNome,
           data_aplicacao: form.data_aplicacao,
@@ -222,7 +225,7 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
         const movId = `mov-${Date.now()}`;
         const payloadMov = {
           id: movId,
-          fazenda_id: 'faz-1',
+          fazenda_id: activeFazId,
           produto_id: produtoSelecionado.id,
           tipo: 'saida',
           quantidade: animaisAlvos.length,

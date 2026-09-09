@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function DietaForm({ onSalvo, onCancelar }) {
   const { queueSyncEvent } = useSync();
@@ -45,10 +46,11 @@ export default function DietaForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = `diet-${Date.now()}`;
       const payload = {
         id,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         nome: form.nome.trim(),
         descricao: form.descricao.trim(),
         lote_id: form.lote_id,

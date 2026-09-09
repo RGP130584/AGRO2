@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function LancamentoForm({ onSalvo, onCancelar }) {
   const { queueSyncEvent } = useSync();
@@ -27,10 +28,11 @@ export default function LancamentoForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = `fin-${Date.now()}`;
       const payload = {
         id,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         tipo: form.tipo,
         categoria: form.categoria,
         descricao: form.descricao.trim(),
