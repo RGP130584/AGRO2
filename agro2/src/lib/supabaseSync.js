@@ -54,10 +54,11 @@ export async function pushSyncToSupabase() {
 }
 
 /**
- * Puxa todos os dados do Supabase para o IndexedDB local
+ * Puxa todos os dados do Supabase para o IndexedDB local e notifica a interface
  */
 export async function pullSyncFromSupabase() {
   try {
+    let hasChanges = false;
     for (const tableName of TABLES_TO_SYNC) {
       try {
         const { data, error } = await supabase.from(tableName).select('*');
@@ -68,12 +69,17 @@ export async function pullSyncFromSupabase() {
                 ...item,
                 sync_status: 'synced'
               });
+              hasChanges = true;
             }
           }
         }
       } catch (tableErr) {
         console.warn(`[Supabase Pull] Tabela ${tableName}:`, tableErr.message);
       }
+    }
+
+    if (hasChanges) {
+      window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
     }
   } catch (err) {
     console.error('[Supabase Pull Error]:', err);

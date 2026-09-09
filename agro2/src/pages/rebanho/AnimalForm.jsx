@@ -3,6 +3,7 @@ import { ArrowLeft, Save, Plus, Edit3 } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import CameraCapture from '../../components/CameraCapture.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 const RACAS_SUGERIDAS = {
   Bovino: ['Nelore', 'Nelore Mocho', 'Nelore P.O.', 'Angus', 'Cruzamento Angus/Nelore', 'Senepol', 'Brahman', 'Girolando', 'Gir Leiteiro', 'Holandês', 'Brangus', 'Wagyu', 'Outra'],
@@ -114,10 +115,11 @@ export default function AnimalForm({ animalId, onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = animalId || `ani-${Date.now()}`;
       const payload = {
         id,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         lote_id: form.lote_id,
         brinco: form.brinco.trim().toUpperCase(),
         rfid: form.rfid.trim(),

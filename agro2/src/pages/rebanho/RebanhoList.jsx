@@ -15,6 +15,9 @@ export default function RebanhoList({ onNovoAnimal, onVerDetalhe, onVerLotes }) 
 
   useEffect(() => {
     carregarDados();
+    const handleSyncUpdate = () => carregarDados();
+    window.addEventListener('agro2_sync_updated', handleSyncUpdate);
+    return () => window.removeEventListener('agro2_sync_updated', handleSyncUpdate);
   }, []);
 
   async function carregarDados() {

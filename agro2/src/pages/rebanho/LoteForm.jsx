@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
+import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function LoteForm({ loteId, especieInicial, onSalvo, onCancelar }) {
   const { queueSyncEvent } = useSync();
@@ -48,10 +49,11 @@ export default function LoteForm({ loteId, especieInicial, onSalvo, onCancelar }
 
     setLoading(true);
     try {
+      const activeFazId = await getActiveFazendaId();
       const id = loteId || `lot-${Date.now()}`;
       const payload = {
         id,
-        fazenda_id: 'faz-1',
+        fazenda_id: activeFazId,
         nome: form.nome.trim(),
         especie: form.especie,
         categoria: form.categoria,

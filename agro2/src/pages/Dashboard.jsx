@@ -50,7 +50,7 @@ export default function Dashboard({ onNavigate }) {
         const mediaGmd = gmds.length > 0 ? gmds.reduce((a, b) => a + b, 0) / gmds.length : 0;
 
         // Produtos com estoque baixo
-        const baixos = produtos.filter((p) => p.saldo_atual <= p.estoque_minimo);
+        const baixos = produtos.filter((p) => p.saldo_atual <= (p.estoque_minimo || 0));
 
         // Lotes com contagem
         const lotesContados = await Promise.all(
@@ -76,7 +76,11 @@ export default function Dashboard({ onNavigate }) {
         setLoading(false);
       }
     }
+
     carregarDashboard();
+    const handleSyncUpdate = () => carregarDashboard();
+    window.addEventListener('agro2_sync_updated', handleSyncUpdate);
+    return () => window.removeEventListener('agro2_sync_updated', handleSyncUpdate);
   }, [especieFiltro]);
 
   const ESPECIES = [
