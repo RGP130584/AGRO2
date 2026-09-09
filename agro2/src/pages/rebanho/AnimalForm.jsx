@@ -120,16 +120,16 @@ export default function AnimalForm({ animalId, onSalvo, onCancelar }) {
       const payload = {
         id,
         fazenda_id: activeFazId,
-        lote_id: form.lote_id,
+        lote_id: form.lote_id || null,
         brinco: form.brinco.trim().toUpperCase(),
-        rfid: form.rfid.trim(),
+        rfid: form.rfid.trim() || null,
         especie: form.especie,
         raca: racaFinal,
         categoria: form.categoria,
         sexo: form.sexo,
         data_nascimento: form.data_nascimento || null,
         peso_atual: form.peso_atual ? parseFloat(form.peso_atual) : 0,
-        foto: form.foto,
+        foto: form.foto || null,
         status: 'ativo',
         sync_status: 'pending',
         updated_at: new Date().toISOString()
@@ -137,7 +137,6 @@ export default function AnimalForm({ animalId, onSalvo, onCancelar }) {
 
       if (!animalId) {
         payload.created_at = new Date().toISOString();
-        payload.data_ultima_pesagem = new Date().toISOString().split('T')[0];
         payload.gmd_recente = 0;
         payload.carencia_fim = null;
         await db.animais.add(payload);
