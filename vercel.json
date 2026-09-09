@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd agro2 && npm install && npm run build",
+  "outputDirectory": "agro2/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
