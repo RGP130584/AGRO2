@@ -18,7 +18,7 @@ export const TABLES_TO_SYNC = [
 ];
 
 /**
- * Sincroniza a fila de pendências locais para o Supabase
+ * Envia todos os eventos pendentes locais para o Supabase
  */
 export async function pushSyncToSupabase() {
   try {
@@ -31,12 +31,18 @@ export async function pushSyncToSupabase() {
           } else if (ev.payload) {
             const cleanPayload = { ...ev.payload };
             delete cleanPayload.sync_status;
-            await supabase.from(ev.entidade).upsert(cleanPayload);
+            
+            const { error } = await supabase.from(ev.entidade).upsert(cleanPayload);
+            if (error) {
+              console.warn(`[Supabase Push] Erro ao enviar ${ev.entidade}:`, error.message);
+            }
           }
         } catch (subErr) {
-          console.warn(`[Supabase Push] Falha ao enviar ${ev.entidade}:`, subErr.message);
+          console.warn(`[Supabase Push] Exceção ao enviar ${ev.entidade}:`, subErr.message);
         }
       }
+      
+      // Marca evento como sincronizado no local
       await db.sync_queue.update(ev.id, {
         status: 'synced',
         synced_at: new Date().toISOString()
@@ -48,7 +54,7 @@ export async function pushSyncToSupabase() {
 }
 
 /**
- * Puxa dados atualizados do Supabase para o IndexedDB local
+ * Puxa todos os dados do Supabase para o IndexedDB local
  */
 export async function pullSyncFromSupabase() {
   try {

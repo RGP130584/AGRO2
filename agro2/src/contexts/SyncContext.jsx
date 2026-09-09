@@ -31,14 +31,22 @@ export function SyncProvider({ children }) {
   };
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncNow();
+    };
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     updatePendingCount();
-    const interval = setInterval(updatePendingCount, 5000);
+    // Executa sincronização inicial e periódica a cada 8 segundos
+    syncNow();
+    const interval = setInterval(() => {
+      updatePendingCount();
+      syncNow();
+    }, 8000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -59,6 +67,8 @@ export function SyncProvider({ children }) {
         created_at: new Date().toISOString()
       });
       await updatePendingCount();
+      // Sincroniza imediatamente na nuvem após enfileirar
+      setTimeout(() => syncNow(), 100);
     } catch (err) {
       console.error('Erro ao enfileirar evento de sync:', err);
     }
