@@ -1,0 +1,27 @@
+==================================================
+TESTE: REGISTRO E ATUALIZAÇÃO DO REBANHO (ANIMAIS)
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / Supabase
+==================================================
+
+PRÉ-CONDIÇÃO:
+Fazenda ativa = faz-1788991704385.
+
+AÇÃO 1:
+Criar animal SYNC-REBUILD-PC-001 (Brinco: SYNC-REBUILD-PC-001, Espécie: Bovino, Raça: Nelore, Categoria: Boi Gordo, Peso: 500 kg).
+
+RESULTADO OBTIDO 1:
+Payload enfileirado na sync_queue. Push sanitizado sem campos de UI.
+Supabase HTTP 201 Created. Registro inserido na tabela 'animais'.
+
+AÇÃO 2:
+Atualizar peso do animal no celular para 535 kg.
+
+RESULTADO OBTIDO 2:
+Payload de atualização enviado via HTTP 200 OK. Campo peso_atual atualizado no PostgreSQL e propagado via WebSocket Realtime para o PC.
+
+EVIDÊNCIA:
+PostgreSQL ID: ani-c-pc-1788998113388 | Brinco: SYNC-REBUILD-PC-001 | Peso: 535 kg
+
+STATUS:
+PASS

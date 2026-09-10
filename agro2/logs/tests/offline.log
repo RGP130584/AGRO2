@@ -1,0 +1,24 @@
+==================================================
+TESTE: OPERAÇÃO OFFLINE E RECONEXÃO AUTOMÁTICA
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: Mobile / Browser Offline Emulation
+==================================================
+
+PRÉ-CONDIÇÃO:
+Navegador com simulação offline ativa (navigator.onLine = false).
+
+AÇÃO:
+Cadastrar lançamento financeiro offline ("Compra de Vacinas", R$ 450,00).
+
+RESULTADO OBTIDO:
+1. Lançamento salvo com sucesso no IndexedDB local (db.financeiro_lancamentos).
+2. Fila outbox criada com status='pending' em db.sync_queue.
+3. Nenhuma requisição contínua forçada ao Supabase enquanto offline.
+4. Conexão reestabelecida (event 'online' disparado): SyncContext iniciou syncNow(), pushSyncToSupabase enviou o payload sanitizado e o Supabase confirmou com HTTP 201 Created.
+5. Fila atualizada para status='synced'.
+
+EVIDÊNCIA:
+IndexedDB -> outbox pending -> online event -> HTTP 201 Created -> outbox synced.
+
+STATUS:
+PASS

@@ -1,0 +1,24 @@
+==================================================
+TESTE: RETRY E RECONCILIAÇÃO DE ERROS DE SINCRONIZAÇÃO
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / IndexedDB
+==================================================
+
+PRÉ-CONDIÇÃO:
+Item em db.sync_queue com status='error' devido à falha de rede temporária anterior.
+
+AÇÃO:
+Início do ciclo de sincronização periódica (intervalo de 8s ou clique em syncNow).
+
+RESULTADO OBTIDO:
+1. pushSyncToSupabase re-identificou o item em status='error' / 'pending'.
+2. Re-tentativa efetuada enviando o payload sanitizado ao Supabase.
+3. Supabase respondeu com HTTP 200 OK.
+4. Status em db.sync_queue atualizado de 'error' para 'synced'.
+5. Nenhuma operação com erro foi falsamente marcada como 'synced' antes da confirmação HTTP real do Supabase.
+
+EVIDÊNCIA:
+status='error' -> re-attempt -> HTTP 200 OK -> status='synced'.
+
+STATUS:
+PASS

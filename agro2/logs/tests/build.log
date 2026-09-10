@@ -1,0 +1,32 @@
+==================================================
+TESTE: BUILD DE PRODUÇÃO VITE
+DATA: 2026-09-09T22:16:57.000Z
+AMBIENTE: local / production build
+==================================================
+
+PRÉ-CONDIÇÃO:
+Dependências instaladas em /agro2 e contratos DB_COLUMNS sanitizados.
+
+AÇÃO:
+npm run build (vite build)
+
+RESULTADO ESPERADO:
+Compilação de chunks JS/CSS sem erros de compilação ou sintaxe.
+
+RESULTADO OBTIDO:
+vite v6.4.3 building for production...
+transforming...
+✓ 1950 modules transformed.
+rendering chunks...
+dist/index.html                         1.45 kB
+dist/assets/index-CHVHGnHS.css          9.37 kB
+dist/assets/supabaseSync-DTeDq_HT.js    5.08 kB
+dist/assets/supabase-BIbKxeXV.js      227.14 kB
+dist/assets/index-CdyUOX6i.js         498.18 kB
+✓ built in 1.96s
+
+EVIDÊNCIA:
+Command exited with code 0. Zero warnings de sintaxe.
+
+STATUS:
+PASS

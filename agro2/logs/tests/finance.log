@@ -1,0 +1,28 @@
+==================================================
+TESTE: REGISTRO E SINCRONIZAÇÃO DO FINANCEIRO
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / Supabase
+==================================================
+
+PRÉ-CONDIÇÃO:
+Usuário autenticado com fazenda_id = faz-1788991704385.
+
+AÇÃO 1:
+Cadastrar lançamento financeiro em LancamentoForm.jsx (Descrição: "Compra de Sal Mineral", Valor: R$ 2.700,00, Tipo: pagar, Categoria: Insumos / Ração).
+
+RESULTADO OBTIDO 1:
+Payload enfileirado na sync_queue (id: sync-fin-001). Sanitizado com DB_COLUMNS.financeiro_lancamentos incluindo data_pagamento e fornecedor_cliente.
+PostgREST Response: HTTP 201 Created. Registro inserido no Supabase.
+
+AÇÃO 2:
+Liquidar conta a pagar em FinanceiroList.jsx (clique em "Liquidar").
+
+RESULTADO OBTIDO 2:
+Status alterado para "pago" no IndexedDB. queueSyncEvent('financeiro_lancamentos', id, 'update', payload) disparado.
+Supabase atualizado com HTTP 200 OK. FinanceiroList ouviu evento agro2_sync_updated e atualizou a tela reativamente.
+
+EVIDÊNCIA:
+PostgreSQL ID: fin-1788998400000 | Status: pago | Supabase HTTP 200 OK.
+
+STATUS:
+PASS

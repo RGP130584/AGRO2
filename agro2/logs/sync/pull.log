@@ -1,0 +1,12 @@
+==================================================
+LOG: PULL SYNCHRONIZATION
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / PostgreSQL yykhelzfnoespjvzjqnb
+==================================================
+
+[2026-09-09T22:17:01.500Z] PULL EXECUTED
+Table: usuarios | Fetched: 2 records | Merged: 2 | Preserved Pending: 0
+Table: fazendas | Fetched: 2 records | Merged: 2 | Preserved Pending: 0
+Table: animais | Fetched: 3 records | Merged: 3 | Preserved Pending: 0
+Table: financeiro_lancamentos | Fetched: 1 records | Merged: 1 | Preserved Pending: 0
+Status: SUCCESS | Event Dispatched: agro2_sync_updated

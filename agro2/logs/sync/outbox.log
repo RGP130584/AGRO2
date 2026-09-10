@@ -1,0 +1,14 @@
+==================================================
+LOG: OUTBOX & QUEUE STATE PROCESSOR
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / IndexedDB sync_queue
+==================================================
+
+[2026-09-09T22:17:01.000Z] QUEUE ITEM CREATED
+Queue ID: sync-1788998401
+Entidade: financeiro_lancamentos | Entidade ID: fin-1788998400000
+Ação: update | Initial Status: pending
+
+[2026-09-09T22:17:01.250Z] QUEUE ITEM PROCESSED
+Queue ID: sync-1788998401 | Status: synced | Synced At: 2026-09-09T22:17:01.250Z
+PostgREST Confirmation: 200 OK

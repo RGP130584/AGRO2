@@ -1,0 +1,13 @@
+==================================================
+LOG: SYNCHRONIZATION ERRORS & POSTGREST REJECTIONS
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / PostgreSQL yykhelzfnoespjvzjqnb
+==================================================
+
+[2026-09-09T21:10:45.000Z] POSTGREST SCHEMA ERROR (CORRIGIDO VIA SANITIZER)
+TABLE: animais
+ACTION: update
+POSTGREST CODE: PGRST204
+ERROR: Could not find the 'ultima_aplicacao_nome' column of 'animais' in the schema cache
+RESULT: Outbox item kept in status='error' | Rejection prevented silent corruption
+MITIGATION: SanitizePayload filter implemented in commit 616c092 to strip non-existent columns before push.

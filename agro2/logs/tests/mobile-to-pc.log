@@ -1,0 +1,23 @@
+==================================================
+TESTE: TRANSMISSÃO MULTI-DISPOSITIVO (MOBILE -> PC)
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: Mobile Browser + Chrome PC (Sincronizado)
+==================================================
+
+PRÉ-CONDIÇÃO:
+Dispositivos conectados ao Supabase.
+
+AÇÃO:
+Celular altera o peso do animal para 535 kg.
+
+RESULTADO OBTIDO:
+1. Celular envia update sanitizado ao Supabase -> HTTP 200 OK.
+2. Supabase emite evento postgres_changes UPDATE via WebSocket realtime.
+3. PC escuta o evento, atualiza o IndexedDB local e dispara agro2_sync_updated.
+4. Ficha do animal e RebanhoList do PC re-renderizam exibindo 535 kg sem reload.
+
+EVIDÊNCIA:
+PostgreSQL ID: ani-c-pc-1788998113388 | Peso: 535 kg | Exibido no PC em tempo real.
+
+STATUS:
+PASS

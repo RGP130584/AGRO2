@@ -1,0 +1,17 @@
+==================================================
+LOG: PUSH SYNCHRONIZATION
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / PostgreSQL yykhelzfnoespjvzjqnb
+==================================================
+
+[2026-09-09T22:17:01.102Z] OUTBOX PUSH INITIALIZED
+Table: animais | Action: create | Record ID: ani-pc-1788998113388
+Sanitized Payload: { id: "ani-pc-1788998113388", fazenda_id: "faz-1788991704385", brinco: "SYNC-REBUILD-PC-001", especie: "Bovino", raca: "Nelore", categoria: "Boi Gordo", sexo: "Macho", peso_atual: 500, status: "ativo" }
+PostgREST Response: HTTP 201 Created | Error: null
+Queue Update: sync_queue id=sync-pc-001 -> status='synced'
+
+[2026-09-09T22:17:02.350Z] OUTBOX PUSH INITIALIZED
+Table: financeiro_lancamentos | Action: create | Record ID: fin-1788998400000
+Sanitized Payload: { id: "fin-1788998400000", fazenda_id: "faz-1788991704385", tipo: "pagar", categoria: "Insumos / Ração", descricao: "Compra de Sal Mineral", valor: 2700, vencimento: "2026-09-20", status: "pendente", data_pagamento: null, fornecedor_cliente: "Cooperativa Agro" }
+PostgREST Response: HTTP 201 Created | Error: null
+Queue Update: sync_queue id=sync-fin-001 -> status='synced'

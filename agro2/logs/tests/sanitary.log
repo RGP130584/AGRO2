@@ -1,0 +1,25 @@
+==================================================
+TESTE: APLICAÇÃO SANITÁRIA E CARÊNCIA
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / Supabase
+==================================================
+
+PRÉ-CONDIÇÃO:
+Animal SUCURI existente (id: ani-1788998259959).
+
+AÇÃO:
+Registrar vacinação em AplicacaoForm.jsx com carência até 2026-10-15.
+
+RESULTADO ESPERADO:
+Sanitização do payload de aplicacoes_sanitarias com DB_COLUMNS. Preservação de carencia_fim e sincronização do animal no Supabase.
+
+RESULTADO OBTIDO:
+Payload de aplicacoes_sanitarias enfileirado com id=apl-001. SanitizePayload removeu campos inexistentes no banco.
+Update de animais enfileirado enviando carencia_fim="2026-10-15".
+Supabase aceitou com HTTP 200 OK. Efeito cascata atualizou a carência local no PC via Realtime.
+
+EVIDÊNCIA:
+PostgreSQL animais id=ani-1788998259959 -> carencia_fim = '2026-10-15'
+
+STATUS:
+PASS

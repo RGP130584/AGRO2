@@ -1,0 +1,24 @@
+==================================================
+TESTE: TRANSMISSÃO MULTI-DISPOSITIVO (PC -> MOBILE)
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: Chrome PC + Mobile Browser (Sincronizado)
+==================================================
+
+PRÉ-CONDIÇÃO:
+PC e Celular autenticados com o mesmo usuário teste01 (fazenda_id = faz-1788991704385).
+
+AÇÃO:
+PC cria o animal SYNC-REBUILD-PC-001.
+
+RESULTADO OBTIDO:
+1. PC insere em db.animais no IndexedDB local com status='pending'.
+2. pushSyncToSupabase envia o payload sanitizado ao Supabase -> HTTP 201 Created.
+3. Supabase emite evento postgres_changes INSERT via WebSocket realtime.
+4. Celular escuta o evento no canal agro2-realtime-changes, salva no IndexedDB local com status='synced' e dispara o evento agro2_sync_updated.
+5. RebanhoList do Celular re-renderiza exibindo o animal sem necessidade de F5.
+
+EVIDÊNCIA:
+PostgreSQL ID: ani-c-pc-1788998113388 | Brinco: SYNC-REBUILD-PC-001 | Status Celular: Exibido em tempo real.
+
+STATUS:
+PASS

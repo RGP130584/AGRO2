@@ -1,0 +1,22 @@
+==================================================
+TESTE: MOVIMENTAÇÃO DE ESTOQUE
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / Supabase
+==================================================
+
+PRÉ-CONDIÇÃO:
+Produto cadastrado localmente.
+
+AÇÃO:
+Registrar baixa de estoque durante aplicação sanitária.
+
+RESULTADO OBTIDO:
+Payload de estoque_movimentos enfileirado e sanitizado contra DB_COLUMNS.estoque_movimentos.
+Campos responsavel e referencia_id preservados.
+Supabase HTTP 201 Created.
+
+EVIDÊNCIA:
+PostgreSQL estoque_movimentos id=mov-1788998400 -> HTTP 201 Created.
+
+STATUS:
+PASS

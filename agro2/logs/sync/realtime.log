@@ -1,0 +1,13 @@
+==================================================
+LOG: REALTIME SUBSCRIPTION & WEBSOCKET EVENTS
+DATA: 2026-09-09T22:17:00.000Z
+AMBIENTE: production (Vercel) / PostgreSQL yykhelzfnoespjvzjqnb
+==================================================
+
+[2026-09-09T22:17:00.800Z] CHANNEL SUBSCRIBED: agro2-realtime-changes
+Status: SUBSCRIBED | Schema: public | Event Scope: *
+
+[2026-09-09T22:17:02.100Z] REALTIME EVENT RECEIVED
+Table: animais | EventType: UPDATE | Record ID: ani-pc-1788998113388
+Payload New: { id: "ani-pc-1788998113388", peso_atual: 535, carencia_fim: "2026-10-15" }
+Action: Local IndexedDB put executed | UI Dispatched: agro2_sync_updated
