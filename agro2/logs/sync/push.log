@@ -1,32 +1,10 @@
-[2026-09-09T22:28:20-03:00] [PUSH EXECUTION LOG]
-[TEST ANIMAL] Target table: animais
-  ID: SYNC-P03-ANIMAL-1789003696187
-  Brinco: P03-6187 | Categoria: Novilha | Sexo: Femea | Status: Ativo
-  Payload Sent: {"id":"SYNC-P03-ANIMAL-1789003696187","brinco":"P03-6187","fazenda_id":"faz-1788991704385","categoria":"Novilha","sexo":"Femea","status":"Ativo","peso_atual":320,"carencia_fim":null,"created_at":"2026-09-10T01:28:16.187Z"}
-  Outbox Status before: pending -> Outbox Status after: synced
-  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-ANIMAL-1789003696187' }], error: null }
-  RESULT: PASS
+[2026-09-09T22:54:28-03:00] [PUSH EXECUTION LOG - P0.4 FINANCEIRO]
+[OUTBOX CREATE] id: sync-fin-million-1789005267279 entidade: financeiro_lancamentos entidade_id: fin-million-1789005267279 status: pending
+[OUTBOX PUSH] id: sync-fin-million-1789005267279 entidade: financeiro_lancamentos acao: create
+[OUTBOX CONFIRMED] id: sync-fin-million-1789005267279 resultado: PASS Supabase confirmado: fin-million-1789005267279 (Valor: R$ 1.000.000,00)
 
-[TEST FINANCEIRO] Target table: financeiro_lancamentos
-  ID: SYNC-P03-FIN-1789003696187
-  Tipo: despesa | Categoria: Veterinario | Valor: 450.00 | Status: pago
-  Payload Sent: {"id":"SYNC-P03-FIN-1789003696187","fazenda_id":"faz-1788991704385","tipo":"despesa","categoria":"Veterinario","descricao":"Vacinação P0.3 Validation","valor":450,"vencimento":"2026-09-10","status":"pago","data_pagamento":"2026-09-10","fornecedor_cliente":"Vet Agro Ltda"}
-  Sanitization: Discarded local field 'comprovante' (not in PostgreSQL schema) with console warning.
-  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-FIN-1789003696187' }], error: null }
-  RESULT: PASS
-
-[TEST SANITARIO] Target table: aplicacoes_sanitarias
-  ID: SYNC-P03-SAN-1789003696187
-  Produto: Ivermectina 1% | Dose: 10ml | Via: Subcutânea | Carencia Fim: 2026-10-10
-  Payload Sent: {"id":"SYNC-P03-SAN-1789003696187","animal_id":"SYNC-P03-ANIMAL-1789003696187","fazenda_id":"faz-1788991704385","produto_nome":"Ivermectina 1%","dose":"10ml","via":"Subcutânea","motivo":"Vermifugação P0.3 Validation","responsavel":"Dr. Silva","dosagem":"1ml / 50kg","carencia_fim":"2026-10-10","data_aplicacao":"2026-09-10","observacoes":"Teste P0.3 Sanitária"}
-  Sanitization: Mapped local 'data' -> 'data_aplicacao'. Discarded local 'carencia_dias' with console warning.
-  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-SAN-1789003696187' }], error: null }
-  RESULT: PASS
-
-[TEST PRODUTOS] Target table: produtos
-  ID: SYNC-P03-PROD-1789003696187
-  Nome: Ração Inicial P0.3 6187 | Saldo: 150.5 | Validade: 2027-12-31
-  Payload Sent: {"id":"SYNC-P03-PROD-1789003696187","nome":"Ração Inicial P0.3 6187","tipo":"Ração","carencia_dias":0,"saldo_atual":150.5,"validade":"2027-12-31"}
-  Sanitization: Discarded local fields 'fazenda_id', 'unidade' (not in PostgreSQL schema).
-  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-PROD-1789003696187' }], error: null }
-  RESULT: PASS
+[FINANCEIRO CREATE] id: SYNC-P04-FIN-REAL-1789005267779 fazenda_id: faz-1788991704385 tipo: pagar valor: 7500.50
+[OUTBOX CREATE] id: sync-p04-outbox-1789005267779 entidade: financeiro_lancamentos entidade_id: SYNC-P04-FIN-REAL-1789005267779 status: pending
+[OUTBOX PUSH] id: sync-p04-outbox-1789005267779 entidade: financeiro_lancamentos acao: create
+[OUTBOX CONFIRMED] id: sync-p04-outbox-1789005267779 resultado: PASS Supabase confirmado: SYNC-P04-FIN-REAL-1789005267779
+RESULT: PASS

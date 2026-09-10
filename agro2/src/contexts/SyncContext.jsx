@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { db } from '../db/database.js';
 
 const SyncContext = createContext();
@@ -21,9 +21,12 @@ export function SyncProvider({ children }) {
   const [lastSyncTime, setLastSyncTime] = useState(localStorage.getItem('agro2_last_sync') || null);
   const [syncError, setSyncError] = useState(null);
 
+  const isSyncingRef = useRef(false);
+  const shouldSyncAgainRef = useRef(false);
+
   const updatePendingCount = async () => {
     try {
-      const count = await db.sync_queue.where('status').equals('pending').count();
+      const count = await db.sync_queue.where('status').anyOf(['pending', 'error']).count();
       setPendingCount(count);
     } catch (e) {
       console.error('Erro ao contar pendências de sync:', e);
@@ -56,9 +59,10 @@ export function SyncProvider({ children }) {
   }, []);
 
   const queueSyncEvent = async (entidade, entidadeId, acao, payload) => {
+    const queueId = `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     try {
       await db.sync_queue.add({
-        id: `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: queueId,
         entidade,
         entidade_id: entidadeId,
         acao,
@@ -66,16 +70,24 @@ export function SyncProvider({ children }) {
         status: 'pending',
         created_at: new Date().toISOString()
       });
+      console.log(`[OUTBOX CREATE] id: ${queueId} entidade: ${entidade} entidade_id: ${entidadeId} status: pending`);
       await updatePendingCount();
-      // Sincroniza imediatamente na nuvem após enfileirar
-      setTimeout(() => syncNow(), 100);
+      setTimeout(() => syncNow(), 50);
+      return queueId;
     } catch (err) {
-      console.error('Erro ao enfileirar evento de sync:', err);
+      console.error(`[OUTBOX CREATE ERROR] Erro ao enfileirar evento de sync (${entidade}:${entidadeId}):`, err);
+      setSyncError(err.message || String(err));
+      throw err;
     }
   };
 
   const syncNow = async () => {
-    if (isSyncing) return;
+    if (isSyncingRef.current) {
+      shouldSyncAgainRef.current = true;
+      return;
+    }
+
+    isSyncingRef.current = true;
     setIsSyncing(true);
     setSyncError(null);
 
@@ -84,7 +96,7 @@ export function SyncProvider({ children }) {
     try {
       const deviceId = getDeviceId();
       const lastSyncAt = localStorage.getItem('agro2_last_sync_timestamp') || '1970-01-01T00:00:00.000Z';
-      const pendingEvents = await db.sync_queue.where('status').equals('pending').toArray();
+      const pendingEvents = await db.sync_queue.where('status').anyOf(['pending', 'error']).toArray();
 
       const outbox = pendingEvents.map((ev) => ({
         id: ev.id,
@@ -180,7 +192,12 @@ export function SyncProvider({ children }) {
       console.error('Erro na consolidação de sincronização:', err);
       setSyncError(err.message || String(err));
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
+      if (shouldSyncAgainRef.current) {
+        shouldSyncAgainRef.current = false;
+        setTimeout(() => syncNow(), 100);
+      }
     }
   };
 

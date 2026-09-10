@@ -45,14 +45,18 @@ export default function LancamentoForm({ onSalvo, onCancelar }) {
         created_at: new Date().toISOString()
       };
 
+      console.log(`[FINANCEIRO CREATE] id: ${id} fazenda_id: ${activeFazId} tipo: ${form.tipo} valor: ${val}`);
+
       await db.financeiro_lancamentos.add(payload);
-      await queueSyncEvent('financeiro_lancamentos', id, 'create', payload);
+      const queueId = await queueSyncEvent('financeiro_lancamentos', id, 'create', payload);
+
+      console.log(`[OUTBOX CREATE CONFIRMED] id: ${queueId} entidade: financeiro_lancamentos entidade_id: ${id} status: pending`);
 
       alert('Lançamento financeiro registrado com sucesso!');
       onSalvo();
     } catch (err) {
-      console.error('Erro ao salvar lançamento:', err);
-      alert('Erro ao registrar lançamento.');
+      console.error('[FINANCEIRO CREATE ERROR] Erro ao salvar lançamento:', err);
+      alert('Erro ao registrar lançamento financeiro. Tente novamente.');
     } finally {
       setLoading(false);
     }

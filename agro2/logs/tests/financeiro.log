@@ -1,15 +1,24 @@
-[2026-09-09T22:28:20-03:00] [FINANCEIRO TEST LOG]
-Test Record ID: SYNC-P03-FIN-1789003696187
-Fazenda ID: faz-1788991704385
-Tipo: despesa
-Categoria: Veterinario
-Descrição: Vacinação P0.3 Validation
-Valor: R$ 450,00
-Vencimento (Mapped from data): 2026-09-10
-Status: pago
-Data Pagamento: 2026-09-10
-Fornecedor/Cliente: Vet Agro Ltda
-Sanitização: Campo local 'comprovante' descartado com aviso (não existe na tabela física do PostgreSQL).
-Supabase Upsert: PASS
-Supabase Query Check: PASS (id='SYNC-P03-FIN-1789003696187' retornado com valor=450)
-RESULT: PASS
+[2026-09-09T22:54:28-03:00] [AGRO2 P0.4 FINANCEIRO TEST LOG]
+[TEST 1: LANÇAMENTO R$ 1.000.000]
+  Lançamento ID: fin-million-1789005267279
+  Outbox ID: sync-fin-million-1789005267279
+  Fazenda ID: faz-1788991704385
+  Tipo: despesa
+  Descrição: Compra Confinamento Lote Especial - R$ 1.000.000
+  Valor: R$ 1.000.000,00
+  Status no Supabase: pago
+  Confirmação de Banco Supabase: PASS (Registro verificado via SELECT com valor=1000000)
+
+[TEST 2: NOVO LANÇAMENTO FINANCEIRO REAL]
+  Lançamento ID: SYNC-P04-FIN-REAL-1789005267779
+  Outbox ID: sync-p04-outbox-1789005267779
+  Fazenda ID: faz-1788991704385
+  Tipo: pagar (despesa)
+  Categoria: Veterinária & Serviços
+  Descrição: Despesa Teste P0.4 Outbox Delivery - 1789005267779
+  Valor: R$ 7.500,50
+  Vencimento: 2026-09-10
+  Status Outbox: synced
+  Confirmação de Banco Supabase: PASS (Registro retornado via SELECT no Post)
+
+RESULTADO FINAL FINANCEIRO P0.4: PASS (100% Entrega Confirmada)

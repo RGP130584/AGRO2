@@ -201,11 +201,17 @@ export async function pushSyncToSupabase() {
   const activeFazendaId = await getActiveFazendaId();
   let hasErrors = false;
 
-  // 1. Processa a outbox pendente (sync_queue)
-  const pendingEvents = await db.sync_queue.where('status').equals('pending').toArray();
+  // 1. Processa a outbox pendente e itens com erro para retry automático (sync_queue)
+  const pendingEvents = await db.sync_queue.where('status').anyOf(['pending', 'error']).toArray();
   for (const ev of pendingEvents) {
     if (ev.entidade && TABLES_TO_SYNC.includes(ev.entidade)) {
+      if (ev.status === 'error') {
+        console.log(`[OUTBOX RETRY] id: ${ev.id} entidade: ${ev.entidade} tentativa: auto-retry`);
+      }
+      console.log(`[OUTBOX PUSH] id: ${ev.id} entidade: ${ev.entidade} acao: ${ev.acao}`);
+
       let error = null;
+      let responseData = null;
       try {
         if (ev.acao === 'delete') {
           ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
@@ -213,8 +219,9 @@ export async function pushSyncToSupabase() {
           const cleanPayload = sanitizePayload(ev.entidade, ev.payload);
           const res = await supabase.from(ev.entidade).upsert(cleanPayload).select();
           error = res.error;
-          if (!error && (!res.data || res.data.length === 0)) {
-            error = new Error('Operação de upsert não retornou confirmação de dados.');
+          responseData = res.data;
+          if (!error && (!responseData || !Array.isArray(responseData) || responseData.length === 0)) {
+            error = new Error('Operação de upsert não retornou confirmação de registro no Supabase.');
           }
         }
       } catch (subErr) {
@@ -222,20 +229,35 @@ export async function pushSyncToSupabase() {
       }
 
       if (error) {
-        console.error(`[Sync Error] ${ev.entidade} (${ev.acao}):`, error.message, error);
+        const errMsg = error.message || String(error);
+        console.error(`[OUTBOX ERROR] id: ${ev.id} entidade: ${ev.entidade} erro: ${errMsg}`);
         await db.sync_queue.update(ev.id, {
           status: 'error',
-          error_msg: error.message || String(error)
+          error_msg: errMsg
         });
+        if (db[ev.entidade] && ev.entidade_id) {
+          await db[ev.entidade].update(ev.entidade_id, {
+            sync_status: 'error'
+          });
+        }
         hasErrors = true;
         continue;
       }
-    }
 
-    await db.sync_queue.update(ev.id, {
-      status: 'synced',
-      synced_at: new Date().toISOString()
-    });
+      const confirmedId = responseData && responseData[0] ? responseData[0].id : ev.entidade_id;
+      console.log(`[OUTBOX CONFIRMED] id: ${ev.id} resultado: PASS Supabase confirmado: ${confirmedId}`);
+
+      await db.sync_queue.update(ev.id, {
+        status: 'synced',
+        synced_at: new Date().toISOString()
+      });
+
+      if (db[ev.entidade] && ev.entidade_id) {
+        await db[ev.entidade].update(ev.entidade_id, {
+          sync_status: 'synced'
+        });
+      }
+    }
   }
 
   // 2. Reconciliação Local -> Nuvem: Puxa todos os registros das tabelas locais com status pending/error
@@ -247,12 +269,16 @@ export async function pushSyncToSupabase() {
         if (item && item.id && (item.sync_status === 'pending' || item.sync_status === 'error')) {
           const cleanPayload = sanitizePayload(tableName, item);
           const { data, error } = await supabase.from(tableName).upsert(cleanPayload).select();
-          if (!error && data && data.length > 0) {
+          if (!error && data && Array.isArray(data) && data.length > 0 && data[0].id === item.id) {
+            console.log(`[RECONCILIATION CONFIRMED] table: ${tableName} id: ${item.id}`);
             await db[tableName].update(item.id, {
               sync_status: 'synced'
             });
           } else if (error) {
-            console.warn(`[Reconciliation Push Error] ${tableName}:`, error.message);
+            console.warn(`[Reconciliation Push Error] ${tableName} id ${item.id}:`, error.message);
+            await db[tableName].update(item.id, {
+              sync_status: 'error'
+            });
             hasErrors = true;
           }
         }
