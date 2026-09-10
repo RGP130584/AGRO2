@@ -19,9 +19,9 @@ export async function getActiveFazendaId() {
       console.warn('[getActiveFazendaId fetch error]:', sbErr);
     }
 
-    return 'faz-1';
+    return null;
   } catch (err) {
-    return 'faz-1';
+    return null;
   }
 }
 

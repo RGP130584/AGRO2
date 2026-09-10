@@ -18,7 +18,86 @@ export const TABLES_TO_SYNC = [
   'financeiro_lancamentos'
 ];
 
+/**
+ * Contrato de colunas permitidas no schema relacional PostgreSQL real do Supabase
+ */
+export const DB_COLUMNS = {
+  usuarios: ['id', 'email', 'nome', 'senha', 'perfil', 'ativo', 'created_at'],
+  fazendas: ['id', 'nome', 'proprietario_nome', 'sync_status', 'created_at'],
+  piquetes: ['id', 'fazenda_id', 'nome', 'capacidade', 'sync_status', 'created_at'],
+  lotes: ['id', 'fazenda_id', 'piquete_id', 'nome', 'categoria', 'especie', 'sync_status', 'created_at'],
+  animais: [
+    'id',
+    'fazenda_id',
+    'lote_id',
+    'brinco',
+    'rfid',
+    'especie',
+    'raca',
+    'categoria',
+    'sexo',
+    'data_nascimento',
+    'peso_atual',
+    'gmd_recente',
+    'carencia_fim',
+    'status',
+    'foto',
+    'sync_status',
+    'created_at',
+    'updated_at'
+  ],
+  produtos: ['id', 'nome', 'tipo', 'carencia_dias', 'saldo_atual', 'validade', 'sync_status', 'created_at'],
+  aplicacoes_sanitarias: ['id', 'animal_id', 'lote_id', 'fazenda_id', 'produto_id', 'data_aplicacao', 'carencia_fim', 'sync_status', 'created_at'],
+  ocorrencias_sanitarias: [
+    'id',
+    'fazenda_id',
+    'animal_id',
+    'lote_id',
+    'tipo',
+    'gravidade',
+    'sintoma',
+    'diagnostico',
+    'tratamento',
+    'data',
+    'responsavel',
+    'foto',
+    'resolvido',
+    'sync_status',
+    'created_at'
+  ],
+  dietas: ['id', 'fazenda_id', 'lote_id', 'nome', 'categoria', 'ativa', 'sync_status', 'created_at'],
+  fornecimentos_dieta: ['id', 'fazenda_id', 'lote_id', 'dieta_id', 'produto_id', 'quantidade', 'data', 'responsavel', 'sync_status', 'created_at'],
+  pesagens: ['id', 'animal_id', 'lote_id', 'fazenda_id', 'data', 'peso', 'sync_status', 'created_at'],
+  estoque_movimentos: ['id', 'fazenda_id', 'produto_id', 'tipo', 'quantidade', 'data', 'motivo', 'referencia_id', 'responsavel', 'sync_status', 'created_at'],
+  financeiro_lancamentos: ['id', 'fazenda_id', 'tipo', 'categoria', 'descricao', 'valor', 'vencimento', 'status', 'sync_status', 'created_at']
+};
+
 let realtimeChannel = null;
+
+/**
+ * Sanitiza genericamente qualquer payload contra o contrato explícito DB_COLUMNS
+ */
+export function sanitizePayload(table, payload, activeFazendaId) {
+  const allowedColumns = DB_COLUMNS[table];
+  if (!allowedColumns) {
+    throw new Error(`Tabela não configurada para sincronização: ${table}`);
+  }
+
+  const clean = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (allowedColumns.includes(key)) {
+      clean[key] = value;
+    }
+  }
+
+  delete clean.sync_status;
+
+  if (clean.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
+    clean.fazenda_id = activeFazendaId;
+  }
+
+  return clean;
+}
 
 /**
  * Inscreve no canal WebSockets do Supabase para receber atualizações instantâneas de outros dispositivos
@@ -41,20 +120,23 @@ export function subscribeToRealtimeSync() {
               }
             } else if (payload.new && payload.new.id) {
               if (db[payload.table]) {
-                await db[payload.table].put({
-                  ...payload.new,
-                  sync_status: 'synced'
-                });
+                // Preserva alteração local se estiver pendente de push
+                const localItem = await db[payload.table].get(payload.new.id);
+                if (!localItem || (localItem.sync_status !== 'pending' && localItem.sync_status !== 'error')) {
+                  await db[payload.table].put({
+                    ...payload.new,
+                    sync_status: 'synced'
+                  });
 
-                // Cascata: Se for aplicação sanitária, atualiza a carência no cadastro do animal local
-                if (payload.table === 'aplicacoes_sanitarias' && payload.new.animal_id) {
-                  const anim = await db.animais.get(payload.new.animal_id);
-                  if (anim) {
-                    await db.animais.update(anim.id, {
-                      carencia_fim: payload.new.carencia_fim || anim.carencia_fim,
-                      ultima_aplicacao_nome: payload.new.produto_nome || anim.ultima_aplicacao_nome,
-                      sync_status: 'synced'
-                    });
+                  // Cascata: Se for aplicação sanitária, atualiza a carência no cadastro do animal local
+                  if (payload.table === 'aplicacoes_sanitarias' && payload.new.animal_id) {
+                    const anim = await db.animais.get(payload.new.animal_id);
+                    if (anim) {
+                      await db.animais.update(anim.id, {
+                        carencia_fim: payload.new.carencia_fim || anim.carencia_fim,
+                        sync_status: 'synced'
+                      });
+                    }
                   }
                 }
               }
@@ -71,192 +153,136 @@ export function subscribeToRealtimeSync() {
   }
 }
 
-function sanitizePayload(tableName, payload, activeFazendaId) {
-  const clean = { ...payload };
-  delete clean.sync_status;
-
-  if (clean.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
-    clean.fazenda_id = activeFazendaId;
-  }
-
-  if (tableName === 'animais') {
-    delete clean.ultima_aplicacao_nome;
-    delete clean.data_ultima_aplicacao;
-    delete clean.data_ultima_pesagem;
-    delete clean.raca_custom;
-  }
-
-  return clean;
-}
-
 /**
  * Envia todos os eventos pendentes locais para o Supabase
- * E executa reconciliação de registros locais que estejam ausentes na nuvem
+ * APENAS marca como 'synced' se o Supabase responder sem erro HTTP/PostgREST.
  */
 export async function pushSyncToSupabase() {
-  try {
-    const activeFazendaId = await getActiveFazendaId();
+  const activeFazendaId = await getActiveFazendaId();
+  let hasErrors = false;
 
-    // 1. Processa a outbox pendente (sync_queue)
-    const pendingEvents = await db.sync_queue.where('status').equals('pending').toArray();
-    for (const ev of pendingEvents) {
-      if (ev.entidade && TABLES_TO_SYNC.includes(ev.entidade)) {
-        let error = null;
-        try {
-          if (ev.acao === 'delete') {
-            ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
-          } else if (ev.payload) {
-            const cleanPayload = sanitizePayload(ev.entidade, ev.payload, activeFazendaId);
-            ({ error } = await supabase.from(ev.entidade).upsert(cleanPayload));
-          }
-        } catch (subErr) {
-          error = subErr;
-        }
-
-        if (error) {
-          console.error(`[Sync Error] ${ev.entidade} (${ev.acao}):`, error.message, error);
-          await db.sync_queue.update(ev.id, {
-            status: 'error',
-            error_msg: error.message || String(error)
-          });
-          continue;
-        }
-      }
-
-      await db.sync_queue.update(ev.id, {
-        status: 'synced',
-        synced_at: new Date().toISOString()
-      });
-    }
-
-    // 2. Reconciliação Local -> Nuvem: Puxa todos os registros das tabelas locais
-    // Se o registro não estiver marcado como 'synced' ou se for um registro antigo, envia para o Supabase
-    for (const tableName of TABLES_TO_SYNC) {
-      if (!db[tableName]) continue;
+  // 1. Processa a outbox pendente (sync_queue)
+  const pendingEvents = await db.sync_queue.where('status').equals('pending').toArray();
+  for (const ev of pendingEvents) {
+    if (ev.entidade && TABLES_TO_SYNC.includes(ev.entidade)) {
+      let error = null;
       try {
-        const localItems = await db[tableName].toArray();
-        for (const item of localItems) {
-          if (item && item.id && item.sync_status !== 'synced') {
-            const cleanPayload = sanitizePayload(tableName, item, activeFazendaId);
-            const { error } = await supabase.from(tableName).upsert(cleanPayload);
-            if (!error) {
-              await db[tableName].update(item.id, {
-                fazenda_id: cleanPayload.fazenda_id || item.fazenda_id,
-                sync_status: 'synced'
-              });
-            }
+        if (ev.acao === 'delete') {
+          ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
+        } else if (ev.payload) {
+          const cleanPayload = sanitizePayload(ev.entidade, ev.payload, activeFazendaId);
+          const res = await supabase.from(ev.entidade).upsert(cleanPayload).select();
+          error = res.error;
+          if (!error && (!res.data || res.data.length === 0)) {
+            error = new Error('Operação de upsert não retornou confirmação de dados.');
           }
         }
-      } catch (recErr) {
-        console.warn(`[Reconciliation Push Exception] ${tableName}:`, recErr.message);
+      } catch (subErr) {
+        error = subErr;
+      }
+
+      if (error) {
+        console.error(`[Sync Error] ${ev.entidade} (${ev.acao}):`, error.message, error);
+        await db.sync_queue.update(ev.id, {
+          status: 'error',
+          error_msg: error.message || String(error)
+        });
+        hasErrors = true;
+        continue;
       }
     }
-  } catch (err) {
-    console.error('[Supabase Push Error]:', err);
+
+    await db.sync_queue.update(ev.id, {
+      status: 'synced',
+      synced_at: new Date().toISOString()
+    });
+  }
+
+  // 2. Reconciliação Local -> Nuvem: Puxa todos os registros das tabelas locais com status pending/error
+  for (const tableName of TABLES_TO_SYNC) {
+    if (!db[tableName]) continue;
+    try {
+      const localItems = await db[tableName].toArray();
+      for (const item of localItems) {
+        if (item && item.id && (item.sync_status === 'pending' || item.sync_status === 'error')) {
+          const cleanPayload = sanitizePayload(tableName, item, activeFazendaId);
+          const { data, error } = await supabase.from(tableName).upsert(cleanPayload).select();
+          if (!error && data && data.length > 0) {
+            await db[tableName].update(item.id, {
+              fazenda_id: cleanPayload.fazenda_id || item.fazenda_id,
+              sync_status: 'synced'
+            });
+          } else if (error) {
+            console.warn(`[Reconciliation Push Error] ${tableName}:`, error.message);
+            hasErrors = true;
+          }
+        }
+      }
+    } catch (recErr) {
+      console.warn(`[Reconciliation Push Exception] ${tableName}:`, recErr.message);
+      hasErrors = true;
+    }
+  }
+
+  if (hasErrors) {
+    throw new Error('Houve falhas no envio de algumas operações da outbox.');
   }
 }
 
 /**
- * Puxa todos os dados do Supabase para o IndexedDB local e alinha registros legados
+ * Puxa todos os dados do Supabase para o IndexedDB local sem destruir alterações locais pendentes
  */
 export async function pullSyncFromSupabase() {
-  try {
-    const activeFazendaId = await getActiveFazendaId();
-    let hasChanges = false;
+  const activeFazendaId = await getActiveFazendaId();
+  let hasChanges = false;
 
-    for (const tableName of TABLES_TO_SYNC) {
-      try {
-        const { data, error } = await supabase.from(tableName).select('*');
-        if (error) {
-          console.error(`[Pull Error] ${tableName}:`, error.message, error);
-          continue;
-        }
+  for (const tableName of TABLES_TO_SYNC) {
+    try {
+      const { data, error } = await supabase.from(tableName).select('*');
+      if (error) {
+        console.error(`[Pull Error] ${tableName}:`, error.message, error);
+        continue;
+      }
 
-        if (Array.isArray(data) && data.length > 0) {
-          const supabaseIds = new Set(data.map((d) => d.id));
-
-          for (const item of data) {
-            if (item && item.id && db[tableName]) {
-              let targetFazendaId = item.fazenda_id;
-              // Normaliza a fazenda de registros legados criados sob IDs antigos
-              if (targetFazendaId && activeFazendaId && activeFazendaId !== 'faz-1' && targetFazendaId !== activeFazendaId) {
-                targetFazendaId = activeFazendaId;
-                // Atualiza também no Supabase para sincronizar a nuvem
-                supabase.from(tableName).update({ fazenda_id: activeFazendaId }).eq('id', item.id);
-              }
-
-              await db[tableName].put({
-                ...item,
-                fazenda_id: targetFazendaId || item.fazenda_id,
-                sync_status: 'synced'
-              });
-
-              if (tableName === 'aplicacoes_sanitarias' && item.animal_id) {
-                const anim = await db.animais.get(item.animal_id);
-                if (anim) {
-                  await db.animais.update(anim.id, {
-                    carencia_fim: item.carencia_fim || anim.carencia_fim,
-                    ultima_aplicacao_nome: item.produto_nome || anim.ultima_aplicacao_nome,
-                    sync_status: 'synced'
-                  });
-                }
-              }
-              hasChanges = true;
+      if (Array.isArray(data) && data.length > 0) {
+        for (const item of data) {
+          if (item && item.id && db[tableName]) {
+            // Preserva alteração local pendente sem sobrescrever
+            const localItem = await db[tableName].get(item.id);
+            if (localItem && (localItem.sync_status === 'pending' || localItem.sync_status === 'error')) {
+              continue;
             }
-          }
 
-          // Se existir algum registro no IndexedDB local que NÃO está na nuvem (legado preso), sobe ele agora
-          if (db[tableName]) {
-            const localItems = await db[tableName].toArray();
-            for (const localItem of localItems) {
-              if (localItem && localItem.id && !supabaseIds.has(localItem.id)) {
-                const cleanPayload = { ...localItem };
-                delete cleanPayload.sync_status;
-                if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
-                  cleanPayload.fazenda_id = activeFazendaId;
-                }
-                const { error: pushLegacyErr } = await supabase.from(tableName).upsert(cleanPayload);
-                if (!pushLegacyErr) {
-                  await db[tableName].update(localItem.id, {
-                    fazenda_id: cleanPayload.fazenda_id || localItem.fazenda_id,
-                    sync_status: 'synced'
-                  });
-                  hasChanges = true;
-                }
-              }
+            let targetFazendaId = item.fazenda_id;
+            if (targetFazendaId && activeFazendaId && activeFazendaId !== 'faz-1' && targetFazendaId !== activeFazendaId) {
+              targetFazendaId = activeFazendaId;
             }
-          }
-        } else if (db[tableName]) {
-          // Se o Supabase estiver vazio nessa tabela mas o IndexedDB local tiver dados legados, sobe tudo
-          const localItems = await db[tableName].toArray();
-          for (const localItem of localItems) {
-            if (localItem && localItem.id) {
-              const cleanPayload = { ...localItem };
-              delete cleanPayload.sync_status;
-              if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
-                cleanPayload.fazenda_id = activeFazendaId;
-              }
-              const { error: pushLegacyErr } = await supabase.from(tableName).upsert(cleanPayload);
-              if (!pushLegacyErr) {
-                await db[tableName].update(localItem.id, {
-                  fazenda_id: cleanPayload.fazenda_id || localItem.fazenda_id,
+
+            await db[tableName].put({
+              ...item,
+              fazenda_id: targetFazendaId || item.fazenda_id,
+              sync_status: 'synced'
+            });
+
+            if (tableName === 'aplicacoes_sanitarias' && item.animal_id) {
+              const anim = await db.animais.get(item.animal_id);
+              if (anim) {
+                await db.animais.update(anim.id, {
+                  carencia_fim: item.carencia_fim || anim.carencia_fim,
                   sync_status: 'synced'
                 });
-                hasChanges = true;
               }
             }
+            hasChanges = true;
           }
         }
-      } catch (tableErr) {
-        console.warn(`[Supabase Pull Exception] ${tableName}:`, tableErr.message);
       }
+    } catch (tableErr) {
+      console.warn(`[Supabase Pull Exception] ${tableName}:`, tableErr.message);
     }
+  }
 
-    if (hasChanges) {
-      window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
-    }
-  } catch (err) {
-    console.error('[Supabase Pull Error]:', err);
+  if (hasChanges) {
+    window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
   }
 }
-

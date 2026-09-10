@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Plus, ArrowUpRight, ArrowDownRight, CheckCircle2, Clock } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { formatarMoeda, formatarData } from '../../utils/formatters.js';
+import { useSync } from '../../contexts/SyncContext.jsx';
 
 export default function FinanceiroList({ onNovoLancamento }) {
+  const { queueSyncEvent } = useSync();
   const [lancamentos, setLancamentos] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     carregarFinanceiro();
+    const handleSyncUpdate = () => carregarFinanceiro();
+    window.addEventListener('agro2_sync_updated', handleSyncUpdate);
+    return () => window.removeEventListener('agro2_sync_updated', handleSyncUpdate);
   }, []);
 
   async function carregarFinanceiro() {
@@ -24,13 +29,18 @@ export default function FinanceiroList({ onNovoLancamento }) {
 
   const handleMarcarPago = async (id, statusAtual) => {
     try {
+      const itemOriginal = await db.financeiro_lancamentos.get(id);
+      if (!itemOriginal) return;
+
       const novoStatus = statusAtual === 'pago' ? 'pendente' : 'pago';
-      const dataPag = novoStatus === 'pago' ? new Date().toISOString().split('T')[0] : null;
-      await db.financeiro_lancamentos.update(id, {
+      const updatePayload = {
+        ...itemOriginal,
         status: novoStatus,
-        data_pagamento: dataPag,
         sync_status: 'pending'
-      });
+      };
+
+      await db.financeiro_lancamentos.update(id, updatePayload);
+      await queueSyncEvent('financeiro_lancamentos', id, 'update', updatePayload);
       await carregarFinanceiro();
     } catch (e) {
       console.error('Erro ao alternar status do lançamento:', e);

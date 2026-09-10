@@ -75,8 +75,11 @@ export function SyncProvider({ children }) {
   };
 
   const syncNow = async () => {
+    if (isSyncing) return;
     setIsSyncing(true);
     setSyncError(null);
+
+    let hasSyncError = false;
 
     try {
       const deviceId = getDeviceId();
@@ -95,17 +98,19 @@ export function SyncProvider({ children }) {
 
       const token = localStorage.getItem('agro2_token') || 'demo-token';
 
-      // 1. Tenta sincronização com Supabase (Nuvem compartilhada entre Celular e PC)
+      // 1. Sincronização com Supabase (Nuvem compartilhada entre Celular e PC)
       try {
         const { pushSyncToSupabase, pullSyncFromSupabase, subscribeToRealtimeSync } = await import('../lib/supabaseSync.js');
         subscribeToRealtimeSync();
         await pushSyncToSupabase();
         await pullSyncFromSupabase();
       } catch (sbErr) {
-        console.log('[Sync Supabase] Fallback local ativo:', sbErr.message);
+        console.warn('[Sync Supabase Exception]:', sbErr.message);
+        setSyncError(sbErr.message);
+        hasSyncError = true;
       }
 
-      // 2. Tenta conexão remota com o backend SaaS tradicional (se houver VITE_API_URL)
+      // 2. Conexão remota opcional com backend SaaS REST
       if (API_BASE_URL) {
         try {
           const response = await fetch(`${API_BASE_URL}/v1/sync`, {
@@ -163,14 +168,17 @@ export function SyncProvider({ children }) {
         }
       }
 
-      const nowFormatted = new Date().toLocaleString('pt-BR');
-      const nowIso = new Date().toISOString();
-      setLastSyncTime(nowFormatted);
-      localStorage.setItem('agro2_last_sync', nowFormatted);
-      localStorage.setItem('agro2_last_sync_timestamp', nowIso);
+      if (!hasSyncError) {
+        const nowFormatted = new Date().toLocaleString('pt-BR');
+        const nowIso = new Date().toISOString();
+        setLastSyncTime(nowFormatted);
+        localStorage.setItem('agro2_last_sync', nowFormatted);
+        localStorage.setItem('agro2_last_sync_timestamp', nowIso);
+      }
       await updatePendingCount();
     } catch (err) {
       console.error('Erro na consolidação de sincronização:', err);
+      setSyncError(err.message || String(err));
     } finally {
       setIsSyncing(false);
     }
