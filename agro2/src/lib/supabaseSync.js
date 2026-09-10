@@ -45,6 +45,18 @@ export function subscribeToRealtimeSync() {
                   ...payload.new,
                   sync_status: 'synced'
                 });
+
+                // Cascata: Se for aplicação sanitária, atualiza a carência no cadastro do animal local
+                if (payload.table === 'aplicacoes_sanitarias' && payload.new.animal_id) {
+                  const anim = await db.animais.get(payload.new.animal_id);
+                  if (anim) {
+                    await db.animais.update(anim.id, {
+                      carencia_fim: payload.new.carencia_fim || anim.carencia_fim,
+                      ultima_aplicacao_nome: payload.new.produto_nome || anim.ultima_aplicacao_nome,
+                      sync_status: 'synced'
+                    });
+                  }
+                }
               }
             }
             window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
@@ -168,6 +180,17 @@ export async function pullSyncFromSupabase() {
                 fazenda_id: targetFazendaId || item.fazenda_id,
                 sync_status: 'synced'
               });
+
+              if (tableName === 'aplicacoes_sanitarias' && item.animal_id) {
+                const anim = await db.animais.get(item.animal_id);
+                if (anim) {
+                  await db.animais.update(anim.id, {
+                    carencia_fim: item.carencia_fim || anim.carencia_fim,
+                    ultima_aplicacao_nome: item.produto_nome || anim.ultima_aplicacao_nome,
+                    sync_status: 'synced'
+                  });
+                }
+              }
               hasChanges = true;
             }
           }

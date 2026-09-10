@@ -210,6 +210,10 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
         }
 
         await db.animais.update(animal.id, updateData);
+        const updatedAnimal = await db.animais.get(animal.id);
+        if (updatedAnimal) {
+          await queueSyncEvent('animais', animal.id, 'update', updatedAnimal);
+        }
       }
 
       // 2. Baixa atômica no estoque do produto

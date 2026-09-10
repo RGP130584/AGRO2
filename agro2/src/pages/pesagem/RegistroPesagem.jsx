@@ -117,6 +117,10 @@ export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }
         updated_at: new Date().toISOString(),
         sync_status: 'pending'
       });
+      const updatedAnimal = await db.animais.get(animalSelecionado.id);
+      if (updatedAnimal) {
+        await queueSyncEvent('animais', animalSelecionado.id, 'update', updatedAnimal);
+      }
 
       alert(`✅ Pesagem registrada com sucesso! GMD: +${formatarNumero(gmdCalc.gmd, 2)} kg/dia.`);
       onSalvo();
