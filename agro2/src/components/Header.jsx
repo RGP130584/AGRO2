@@ -1,51 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, RefreshCw, LogOut, ShieldCheck, User, Menu, Home } from 'lucide-react';
+import React from 'react';
+import { Wifi, WifiOff, RefreshCw, LogOut, ShieldCheck, User, Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useSync } from '../contexts/SyncContext.jsx';
 import InstallPrompt from './InstallPrompt.jsx';
-import { getActiveFazendaId, setActiveFazendaId, getFazendasList } from '../utils/fazendaHelper.js';
 
 export default function Header({ pageTitle, onToggleSidebar }) {
   const { user, logout } = useAuth();
   const { isOnline, pendingCount, isSyncing, syncNow } = useSync();
-  const [fazendas, setFazendas] = useState([]);
-  const [activeFazendaIdState, setActiveFazendaIdState] = useState('');
-
-  const carregarFazendas = async () => {
-    const list = await getFazendasList();
-    setFazendas(list);
-    const activeId = await getActiveFazendaId();
-    if (activeId) {
-      setActiveFazendaIdState(activeId);
-    }
-  };
-
-  useEffect(() => {
-    carregarFazendas();
-
-    const handleFazendaChange = (e) => {
-      if (e.detail) {
-        setActiveFazendaIdState(e.detail);
-      }
-      carregarFazendas();
-    };
-
-    window.addEventListener('agro2_fazenda_changed', handleFazendaChange);
-    window.addEventListener('agro2_sync_updated', carregarFazendas);
-
-    return () => {
-      window.removeEventListener('agro2_fazenda_changed', handleFazendaChange);
-      window.removeEventListener('agro2_sync_updated', carregarFazendas);
-    };
-  }, []);
-
-  const handleSelectFazenda = async (e) => {
-    const newId = e.target.value;
-    if (newId) {
-      await setActiveFazendaId(newId);
-      setActiveFazendaIdState(newId);
-    }
-  };
 
   return (
     <header className="top-header">
@@ -64,44 +25,6 @@ export default function Header({ pageTitle, onToggleSidebar }) {
       </div>
 
       <div className="header-actions">
-        {/* Seletor de Fazenda Ativa */}
-        {fazendas.length > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'var(--bg-input, #f1f5f9)',
-              padding: '4px 8px',
-              borderRadius: 'var(--radius-md, 8px)',
-              border: '1px solid var(--border, #cbd5e1)'
-            }}
-          >
-            <Home size={14} style={{ color: 'var(--primary, #15803d)' }} />
-            <select
-              value={activeFazendaIdState}
-              onChange={handleSelectFazenda}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: 'var(--text-main, #0f172a)',
-                cursor: 'pointer',
-                outline: 'none',
-                maxWidth: '160px'
-              }}
-              title="Fazenda Ativa Atual"
-            >
-              {fazendas.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         {/* Status de Conexão */}
         <div
           style={{
