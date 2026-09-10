@@ -71,6 +71,24 @@ export function subscribeToRealtimeSync() {
   }
 }
 
+function sanitizePayload(tableName, payload, activeFazendaId) {
+  const clean = { ...payload };
+  delete clean.sync_status;
+
+  if (clean.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
+    clean.fazenda_id = activeFazendaId;
+  }
+
+  if (tableName === 'animais') {
+    delete clean.ultima_aplicacao_nome;
+    delete clean.data_ultima_aplicacao;
+    delete clean.data_ultima_pesagem;
+    delete clean.raca_custom;
+  }
+
+  return clean;
+}
+
 /**
  * Envia todos os eventos pendentes locais para o Supabase
  * E executa reconciliação de registros locais que estejam ausentes na nuvem
@@ -88,11 +106,7 @@ export async function pushSyncToSupabase() {
           if (ev.acao === 'delete') {
             ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
           } else if (ev.payload) {
-            const cleanPayload = { ...ev.payload };
-            delete cleanPayload.sync_status;
-            if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
-              cleanPayload.fazenda_id = activeFazendaId;
-            }
+            const cleanPayload = sanitizePayload(ev.entidade, ev.payload, activeFazendaId);
             ({ error } = await supabase.from(ev.entidade).upsert(cleanPayload));
           }
         } catch (subErr) {
@@ -123,11 +137,7 @@ export async function pushSyncToSupabase() {
         const localItems = await db[tableName].toArray();
         for (const item of localItems) {
           if (item && item.id && item.sync_status !== 'synced') {
-            const cleanPayload = { ...item };
-            delete cleanPayload.sync_status;
-            if (cleanPayload.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
-              cleanPayload.fazenda_id = activeFazendaId;
-            }
+            const cleanPayload = sanitizePayload(tableName, item, activeFazendaId);
             const { error } = await supabase.from(tableName).upsert(cleanPayload);
             if (!error) {
               await db[tableName].update(item.id, {
