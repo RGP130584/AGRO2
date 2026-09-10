@@ -69,15 +69,29 @@ export const DB_COLUMNS = {
   fornecimentos_dieta: ['id', 'fazenda_id', 'lote_id', 'dieta_id', 'produto_id', 'quantidade', 'data', 'responsavel', 'sync_status', 'created_at'],
   pesagens: ['id', 'animal_id', 'lote_id', 'fazenda_id', 'data', 'peso', 'sync_status', 'created_at'],
   estoque_movimentos: ['id', 'fazenda_id', 'produto_id', 'tipo', 'quantidade', 'data', 'motivo', 'referencia_id', 'responsavel', 'sync_status', 'created_at'],
-  financeiro_lancamentos: ['id', 'fazenda_id', 'tipo', 'categoria', 'descricao', 'valor', 'vencimento', 'status', 'sync_status', 'created_at']
+  financeiro_lancamentos: [
+    'id',
+    'fazenda_id',
+    'tipo',
+    'categoria',
+    'descricao',
+    'valor',
+    'vencimento',
+    'status',
+    'data_pagamento',
+    'fornecedor_cliente',
+    'sync_status',
+    'created_at'
+  ]
 };
 
 let realtimeChannel = null;
 
 /**
  * Sanitiza genericamente qualquer payload contra o contrato explícito DB_COLUMNS
+ * Preserva estritamente o fazenda_id original do payload
  */
-export function sanitizePayload(table, payload, activeFazendaId) {
+export function sanitizePayload(table, payload) {
   const allowedColumns = DB_COLUMNS[table];
   if (!allowedColumns) {
     throw new Error(`Tabela não configurada para sincronização: ${table}`);
@@ -91,11 +105,6 @@ export function sanitizePayload(table, payload, activeFazendaId) {
   }
 
   delete clean.sync_status;
-
-  if (clean.fazenda_id && activeFazendaId && activeFazendaId !== 'faz-1') {
-    clean.fazenda_id = activeFazendaId;
-  }
-
   return clean;
 }
 
@@ -170,7 +179,7 @@ export async function pushSyncToSupabase() {
         if (ev.acao === 'delete') {
           ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
         } else if (ev.payload) {
-          const cleanPayload = sanitizePayload(ev.entidade, ev.payload, activeFazendaId);
+          const cleanPayload = sanitizePayload(ev.entidade, ev.payload);
           const res = await supabase.from(ev.entidade).upsert(cleanPayload).select();
           error = res.error;
           if (!error && (!res.data || res.data.length === 0)) {
@@ -205,11 +214,10 @@ export async function pushSyncToSupabase() {
       const localItems = await db[tableName].toArray();
       for (const item of localItems) {
         if (item && item.id && (item.sync_status === 'pending' || item.sync_status === 'error')) {
-          const cleanPayload = sanitizePayload(tableName, item, activeFazendaId);
+          const cleanPayload = sanitizePayload(tableName, item);
           const { data, error } = await supabase.from(tableName).upsert(cleanPayload).select();
           if (!error && data && data.length > 0) {
             await db[tableName].update(item.id, {
-              fazenda_id: cleanPayload.fazenda_id || item.fazenda_id,
               sync_status: 'synced'
             });
           } else if (error) {
@@ -231,9 +239,9 @@ export async function pushSyncToSupabase() {
 
 /**
  * Puxa todos os dados do Supabase para o IndexedDB local sem destruir alterações locais pendentes
+ * Preserva o fazenda_id original remoto retornado do Supabase
  */
 export async function pullSyncFromSupabase() {
-  const activeFazendaId = await getActiveFazendaId();
   let hasChanges = false;
 
   for (const tableName of TABLES_TO_SYNC) {
@@ -253,14 +261,8 @@ export async function pullSyncFromSupabase() {
               continue;
             }
 
-            let targetFazendaId = item.fazenda_id;
-            if (targetFazendaId && activeFazendaId && activeFazendaId !== 'faz-1' && targetFazendaId !== activeFazendaId) {
-              targetFazendaId = activeFazendaId;
-            }
-
             await db[tableName].put({
               ...item,
-              fazenda_id: targetFazendaId || item.fazenda_id,
               sync_status: 'synced'
             });
 
