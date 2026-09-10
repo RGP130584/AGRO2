@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import { calcularGMD, kgParaArroba } from '../../utils/gmdHelper.js';
 import { formatarNumero } from '../../utils/formatters.js';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -86,7 +86,7 @@ export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const id = `pes-${Date.now()}`;
       const responsavel = user?.nome || 'Operador';
 
@@ -126,7 +126,7 @@ export default function RegistroPesagem({ animalIdInicial, onSalvo, onCancelar }
       onSalvo();
     } catch (err) {
       console.error('Erro ao registrar pesagem:', err);
-      alert('Erro ao registrar pesagem.');
+      alert(err.message || 'Erro ao registrar pesagem.');
     } finally {
       setLoading(false);
     }

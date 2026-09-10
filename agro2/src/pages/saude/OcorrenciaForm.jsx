@@ -4,7 +4,7 @@ import { db } from '../../db/database.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import CameraCapture from '../../components/CameraCapture.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function OcorrenciaForm({ onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -60,7 +60,7 @@ export default function OcorrenciaForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const id = `oco-${Date.now()}`;
       const animalObj = await db.animais.get(form.animal_id);
 
@@ -89,7 +89,7 @@ export default function OcorrenciaForm({ onSalvo, onCancelar }) {
       onSalvo();
     } catch (err) {
       console.error('Erro ao registrar ocorrência:', err);
-      alert('Erro ao registrar ocorrência.');
+      alert(err.message || 'Erro ao registrar ocorrência sanitária.');
     } finally {
       setLoading(false);
     }

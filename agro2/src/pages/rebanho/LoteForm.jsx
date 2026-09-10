@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function LoteForm({ loteId, especieInicial, onSalvo, onCancelar }) {
   const { queueSyncEvent } = useSync();
@@ -49,7 +49,7 @@ export default function LoteForm({ loteId, especieInicial, onSalvo, onCancelar }
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const id = loteId || `lot-${Date.now()}`;
       const payload = {
         id,
@@ -75,7 +75,7 @@ export default function LoteForm({ loteId, especieInicial, onSalvo, onCancelar }
       onSalvo(id);
     } catch (err) {
       console.error('Erro ao salvar lote:', err);
-      alert('Erro ao salvar lote.');
+      alert(err.message || 'Erro ao salvar lote.');
     } finally {
       setLoading(false);
     }

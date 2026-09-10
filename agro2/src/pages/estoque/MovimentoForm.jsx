@@ -3,7 +3,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function MovimentoForm({ onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -40,7 +40,7 @@ export default function MovimentoForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const prod = await db.produtos.get(form.produto_id);
       if (!prod) return;
 
@@ -88,8 +88,8 @@ export default function MovimentoForm({ onSalvo, onCancelar }) {
       alert('Movimento de estoque registrado com sucesso!');
       onSalvo();
     } catch (err) {
-      console.error('Erro ao salvar movimento:', err);
-      alert('Erro ao registrar movimento.');
+      console.error('Erro ao registrar movimento:', err);
+      alert(err.message || 'Erro ao registrar movimento de estoque.');
     } finally {
       setLoading(false);
     }

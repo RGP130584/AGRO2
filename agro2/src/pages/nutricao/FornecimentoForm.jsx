@@ -3,7 +3,7 @@ import { ArrowLeft, Save, Wheat, AlertTriangle } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useSync } from '../../contexts/SyncContext.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function FornecimentoForm({ onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -86,7 +86,7 @@ export default function FornecimentoForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const id = `forn-${Date.now()}`;
       const responsavel = user?.nome || 'Operador';
 
@@ -114,23 +114,15 @@ export default function FornecimentoForm({ onSalvo, onCancelar }) {
       if (form.produto_id) {
         const prod = await db.produtos.get(form.produto_id);
         if (prod) {
-          const divisor = prod.unidade?.includes('40kg') ? 40 : 1;
-          const qtdBaixaEstoque = Math.ceil(qtdFornecida / divisor);
-          const novoSaldo = Math.max(0, prod.saldo_atual - qtdBaixaEstoque);
+          const novoSaldo = Math.max(0, (prod.saldo_atual || 0) - qtdFornecida);
+          await db.produtos.update(prod.id, { saldo_atual: novoSaldo, sync_status: 'pending' });
 
-          await db.produtos.update(prod.id, {
-            saldo_atual: novoSaldo,
-            sync_status: 'pending'
-          });
-
-          // Registrar movimento no estoque
-          const movId = `mov-${Date.now()}`;
           const movPayload = {
-            id: movId,
+            id: `mov-${Date.now()}`,
             fazenda_id: activeFazId,
             produto_id: prod.id,
             tipo: 'saida',
-            quantidade: qtdBaixaEstoque,
+            quantidade: qtdFornecida,
             data: form.data,
             motivo: `Trato / Fornecimento Nutricional (${qtdFornecida} kg)`,
             referencia_id: form.lote_id,
@@ -146,7 +138,7 @@ export default function FornecimentoForm({ onSalvo, onCancelar }) {
       onSalvo();
     } catch (err) {
       console.error('Erro ao registrar fornecimento:', err);
-      alert('Erro ao registrar fornecimento.');
+      alert(err.message || 'Erro ao registrar fornecimento.');
     } finally {
       setLoading(false);
     }

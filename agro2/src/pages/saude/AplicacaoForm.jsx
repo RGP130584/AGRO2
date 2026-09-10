@@ -6,7 +6,7 @@ import { useSync } from '../../contexts/SyncContext.jsx';
 import { calcularFimCarencia, statusCarencia } from '../../utils/carenciaHelper.js';
 import { formatarData } from '../../utils/formatters.js';
 import CameraCapture from '../../components/CameraCapture.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) {
   const { user } = useAuth();
@@ -152,6 +152,7 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
 
     setLoading(true);
     try {
+      const activeFazId = await requireActiveFazendaId();
       const responsavel = user?.nome || 'Operador Agro';
       const produtoNome = produtoSelecionado?.nome || 'Medicamento';
 
@@ -169,8 +170,6 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
         return;
       }
       
-      const activeFazId = await getActiveFazendaId();
-
       // 1. Criar registro de aplicação para cada animal
       for (const animal of animaisAlvos) {
         const aplicacaoId = `apl-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
@@ -179,15 +178,18 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
           animal_id: animal.id,
           lote_id: animal.lote_id,
           fazenda_id: activeFazId,
-          produto_id: form.produto_id,
+          produto_id: produtoSelecionado.id,
           produto_nome: produtoNome,
-          data_aplicacao: form.data_aplicacao,
-          carencia_fim: carenciaCalculada,
           dose: form.dose,
           via: form.via,
-          motivo: form.motivo,
+          motivo: form.motivo.trim() || 'Manejo Preventivo / Rotina',
           responsavel,
           foto: form.foto,
+          dosagem: form.dose,
+          carencia_dias: produtoSelecionado.carencia_dias || 0,
+          carencia_fim: carenciaCalculada,
+          data_aplicacao: form.data_aplicacao,
+          observacoes: form.motivo.trim(),
           sync_status: 'pending',
           created_at: new Date().toISOString()
         };
@@ -195,18 +197,11 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
         await db.aplicacoes_sanitarias.add(payloadApl);
         await queueSyncEvent('aplicacoes_sanitarias', aplicacaoId, 'create', payloadApl);
 
-        // Atualizar carência e nome da última vacina/medicação aplicada no cadastro do animal
-        const updateData = {
-          ultima_aplicacao_nome: produtoNome,
-          data_ultima_aplicacao: form.data_aplicacao,
-          updated_at: new Date().toISOString(),
-          sync_status: 'pending'
-        };
-
-        if (carenciaCalculada) {
-          if (!animal.carencia_fim || carenciaCalculada > animal.carencia_fim) {
-            updateData.carencia_fim = carenciaCalculada;
-          }
+        // Atualizar carência do animal no cadastro
+        const updateData = { sync_status: 'pending' };
+        if (carenciaCalculada && (!animal.carencia_fim || carenciaCalculada > animal.carencia_fim)) {
+          updateData.carencia_fim = carenciaCalculada;
+          updateData.ultima_aplicacao_nome = produtoNome;
         }
 
         await db.animais.update(animal.id, updateData);
@@ -248,7 +243,7 @@ export default function AplicacaoForm({ animalIdInicial, onSalvo, onCancelar }) 
       onSalvo();
     } catch (err) {
       console.error('Erro ao registrar aplicação:', err);
-      alert('Erro ao registrar aplicação sanitária.');
+      alert(err.message || 'Erro ao registrar aplicação sanitária.');
     } finally {
       setLoading(false);
     }

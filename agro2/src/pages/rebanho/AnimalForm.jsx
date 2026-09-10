@@ -3,7 +3,7 @@ import { ArrowLeft, Save, Plus, Edit3 } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
 import CameraCapture from '../../components/CameraCapture.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 const RACAS_SUGERIDAS = {
   Bovino: ['Nelore', 'Nelore Mocho', 'Nelore P.O.', 'Angus', 'Cruzamento Angus/Nelore', 'Senepol', 'Brahman', 'Girolando', 'Gir Leiteiro', 'Holandês', 'Brangus', 'Wagyu', 'Outra'],
@@ -115,7 +115,7 @@ export default function AnimalForm({ animalId, onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const id = animalId || `ani-${Date.now()}`;
       const payload = {
         id,
@@ -137,19 +137,16 @@ export default function AnimalForm({ animalId, onSalvo, onCancelar }) {
 
       if (!animalId) {
         payload.created_at = new Date().toISOString();
-        payload.gmd_recente = 0;
-        payload.carencia_fim = null;
-        await db.animais.add(payload);
-        await queueSyncEvent('animais', id, 'create', payload);
-      } else {
-        await db.animais.update(id, payload);
-        await queueSyncEvent('animais', id, 'update', payload);
       }
 
-      onSalvo(id);
+      await db.animais.put(payload);
+      await queueSyncEvent('animais', id, animalId ? 'update' : 'create', payload);
+
+      alert(`Animal ${form.brinco} ${animalId ? 'atualizado' : 'cadastrado'} com sucesso!`);
+      onSalvo();
     } catch (err) {
       console.error('Erro ao salvar animal:', err);
-      alert('Erro ao salvar cadastro do animal.');
+      alert(err.message || 'Erro ao salvar animal.');
     } finally {
       setLoading(false);
     }

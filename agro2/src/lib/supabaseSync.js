@@ -217,6 +217,24 @@ export async function pushSyncToSupabase() {
           ({ error } = await supabase.from(ev.entidade).delete().eq('id', ev.entidade_id));
         } else if (ev.payload) {
           const cleanPayload = sanitizePayload(ev.entidade, ev.payload);
+
+          // Barreira de Proteção: Entidades operacionais devem possuir fazenda_id válido
+          if (ev.entidade !== 'usuarios' && ev.entidade !== 'fazendas') {
+            if (!cleanPayload.fazenda_id) {
+              const errMsg = `Rejeitado registro órfão sem fazenda_id: ${ev.entidade} (${ev.entidade_id})`;
+              console.error(`[SYNC FARM VALIDATION] ${errMsg}`);
+              await db.sync_queue.update(ev.id, {
+                status: 'error',
+                error_msg: errMsg
+              });
+              if (db[ev.entidade] && ev.entidade_id) {
+                await db[ev.entidade].update(ev.entidade_id, { sync_status: 'error' });
+              }
+              hasErrors = true;
+              continue;
+            }
+          }
+
           const res = await supabase.from(ev.entidade).upsert(cleanPayload).select();
           error = res.error;
           responseData = res.data;

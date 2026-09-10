@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
 import { db } from '../../db/database.js';
 import { useSync } from '../../contexts/SyncContext.jsx';
-import { getActiveFazendaId } from '../../utils/fazendaHelper.js';
+import { requireActiveFazendaId } from '../../utils/fazendaHelper.js';
 
 export default function LancamentoForm({ onSalvo, onCancelar }) {
   const { queueSyncEvent } = useSync();
@@ -28,7 +28,7 @@ export default function LancamentoForm({ onSalvo, onCancelar }) {
 
     setLoading(true);
     try {
-      const activeFazId = await getActiveFazendaId();
+      const activeFazId = await requireActiveFazendaId();
       const id = `fin-${Date.now()}`;
       const payload = {
         id,
@@ -56,7 +56,7 @@ export default function LancamentoForm({ onSalvo, onCancelar }) {
       onSalvo();
     } catch (err) {
       console.error('[FINANCEIRO CREATE ERROR] Erro ao salvar lançamento:', err);
-      alert('Erro ao registrar lançamento financeiro. Tente novamente.');
+      alert(err.message || 'Erro ao registrar lançamento financeiro. Tente novamente.');
     } finally {
       setLoading(false);
     }
