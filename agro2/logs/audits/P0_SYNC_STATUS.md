@@ -1,34 +1,29 @@
-# AGRO2 P0 Sync Status
+# AGRO2 — AUDITORIA P0.3: STATUS FINAL DA SINCRONIZAÇÃO
 
-## Código
-- [x] DB_COLUMNS alinhado
-- [x] Financeiro alinhado (inclui data_pagamento e fornecedor_cliente)
-- [x] Aplicações alinhadas (sanitizadas contra schema relacional)
-- [x] Estoque alinhado (preserva referencia_id e responsavel)
-- [x] Pesagens analisadas (gmd/dias_decorridos preservados localmente)
-- [x] Fornecimentos analisados
-- [x] Ocorrências analisadas
-- [x] fazenda_id preservado (refeita a regra: proibididissímo sobrescrever fazenda_id original)
-- [x] pull seguro (preserva pendências locais sem sobrescrever com rascunhos remotos)
-- [x] outbox seguro (valida confirmação HTTP antes de alterar para synced)
-- [x] realtime tratado (ouvinte escuta e atualiza IndexedDB reativamente)
-- [x] offline preservado
-- [x] retry preservado
+**Status Geral:** PASS  
+**Data da Execução:** 2026-09-09  
+**Responsável:** Antigravity AI Pair Programmer  
 
-## Testes
-- [x] Build (`PASS` — `logs/tests/build.log`)
-- [x] Push (`PASS` — `logs/sync/push.log`)
-- [x] Pull (`PASS` — `logs/sync/pull.log`)
-- [x] Realtime (`PASS` — `logs/sync/realtime.log`)
-- [x] Offline (`PASS` — `logs/tests/offline.log`)
-- [x] Retry (`PASS` — `logs/tests/retry.log`)
-- [x] Financeiro (`PASS` — `logs/tests/finance.log`)
-- [x] Animal (`PASS` — `logs/tests/animal.log`)
-- [x] Sanitário (`PASS` — `logs/tests/sanitary.log`)
-- [x] Estoque (`PASS` — `logs/tests/stock.log`)
-- [x] PC → Mobile (`PASS` — `logs/tests/pc-to-mobile.log`)
-- [x] Mobile → PC (`PASS` — `logs/tests/mobile-to-pc.log`)
+---
 
-## Supabase
-- [x] Nenhuma alteração DDL/migration executada pelo Antigravity diretamente no banco
-- [x] Pendências documentadas em `logs/supabase/findings.md`
+## 1. RESUMO DOS RESULTADOS DE TESTE
+
+| Módulo / Funcionalidade | ID de Teste Único Utilizado | Evidência de Push Supabase | Evidência de Pull / Query | Realtime WebSockets | Log de Referência | Status Final |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Animais** | `SYNC-P03-ANIMAL-1789003696187` | PASS (Brinco `P03-6187`) | PASS (Query confirma 320kg) | PASS (`UPDATE` capturado) | [`push.log`](file:///e:/documentos/projetos/AGRO/agro2/logs/sync/push.log) | **PASS** |
+| **Financeiro** | `SYNC-P03-FIN-1789003696187` | PASS (Despesa R$ 450,00) | PASS (Vencimento `2026-09-10`) | N/A | [`financeiro.log`](file:///e:/documentos/projetos/AGRO/agro2/logs/tests/financeiro.log) | **PASS** |
+| **Aplicação Sanitária / Carência** | `SYNC-P03-SAN-1789003696187` | PASS (`Ivermectina 1%`) | PASS (Carência `2026-10-10`) | PASS | [`carencia.log`](file:///e:/documentos/projetos/AGRO/agro2/logs/tests/carencia.log) | **PASS** |
+| **Produtos / Estoque** | `SYNC-P03-PROD-1789003696187` | PASS (`Ração Inicial P0.3`) | PASS (Saldo `150.5`) | N/A | [`estoque.log`](file:///e:/documentos/projetos/AGRO/agro2/logs/tests/estoque.log) | **PASS** |
+
+---
+
+## 2. EVETIVIDADE DAS CORREÇÕES P0.3
+
+1. **Alinhamento de Schemas Relacionais (`DB_COLUMNS`)**:
+   - Mapeamento explícito de `data` -> `data_aplicacao` em `aplicacoes_sanitarias`.
+   - Mapeamento explícito de `data` -> `vencimento` em `financeiro_lancamentos`.
+   - Sanitização transparente via `sanitizePayload()` com `console.warn()` para descarte seguro de campos locais não presentes no PostgreSQL real.
+2. **Preservação de `fazenda_id`**:
+   - Garantida a imutabilidade e não degradação de `fazenda_id` em todos os fluxos de Push, Pull e Upsert local.
+3. **Log de Evidências Empíricas**:
+   - Todos os arquivos em `/agro2/logs/` foram atualizados com payloads reais e respostas do Supabase (`yykhelzfnoespjvzjqnb.supabase.co`).

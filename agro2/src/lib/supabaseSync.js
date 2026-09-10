@@ -47,26 +47,39 @@ export const DB_COLUMNS = {
     'updated_at'
   ],
   produtos: ['id', 'nome', 'tipo', 'carencia_dias', 'saldo_atual', 'validade', 'sync_status', 'created_at'],
-  aplicacoes_sanitarias: ['id', 'animal_id', 'lote_id', 'fazenda_id', 'produto_id', 'data_aplicacao', 'carencia_fim', 'sync_status', 'created_at'],
+  aplicacoes_sanitarias: [
+    'id',
+    'animal_id',
+    'lote_id',
+    'fazenda_id',
+    'produto_id',
+    'data_aplicacao',
+    'carencia_fim',
+    'dosagem',
+    'observacoes',
+    'produto_nome',
+    'dose',
+    'via',
+    'motivo',
+    'responsavel',
+    'foto',
+    'sync_status',
+    'created_at'
+  ],
   ocorrencias_sanitarias: [
     'id',
     'fazenda_id',
     'animal_id',
     'lote_id',
     'tipo',
-    'gravidade',
-    'sintoma',
-    'diagnostico',
-    'tratamento',
+    'descricao',
     'data',
-    'responsavel',
-    'foto',
     'resolvido',
     'sync_status',
     'created_at'
   ],
   dietas: ['id', 'fazenda_id', 'lote_id', 'nome', 'categoria', 'ativa', 'sync_status', 'created_at'],
-  fornecimentos_dieta: ['id', 'fazenda_id', 'lote_id', 'dieta_id', 'produto_id', 'quantidade', 'data', 'responsavel', 'sync_status', 'created_at'],
+  fornecimentos_dieta: ['id', 'fazenda_id', 'lote_id', 'dieta_id', 'produto_id', 'quantidade', 'data', 'sync_status', 'created_at'],
   pesagens: ['id', 'animal_id', 'lote_id', 'fazenda_id', 'data', 'peso', 'sync_status', 'created_at'],
   estoque_movimentos: ['id', 'fazenda_id', 'produto_id', 'tipo', 'quantidade', 'data', 'motivo', 'referencia_id', 'responsavel', 'sync_status', 'created_at'],
   financeiro_lancamentos: [
@@ -88,8 +101,9 @@ export const DB_COLUMNS = {
 let realtimeChannel = null;
 
 /**
- * Sanitiza genericamente qualquer payload contra o contrato explícito DB_COLUMNS
- * Preserva estritamente o fazenda_id original do payload
+ * Sanitiza genericamente qualquer payload contra o contrato explícito DB_COLUMNS.
+ * Evita perda silenciosa de dados exibindo warning no console para campos não configurados no PostgreSQL.
+ * Preserva estritamente o fazenda_id original do payload.
  */
 export function sanitizePayload(table, payload) {
   const allowedColumns = DB_COLUMNS[table];
@@ -98,13 +112,30 @@ export function sanitizePayload(table, payload) {
   }
 
   const clean = {};
-  for (const [key, value] of Object.entries(payload)) {
+  const discarded = [];
+
+  // Field mapping aliases for schema alignment
+  const workingPayload = { ...payload };
+  if (table === 'aplicacoes_sanitarias' && workingPayload.data && !workingPayload.data_aplicacao) {
+    workingPayload.data_aplicacao = workingPayload.data;
+  }
+  if (table === 'financeiro_lancamentos' && workingPayload.data && !workingPayload.vencimento) {
+    workingPayload.vencimento = workingPayload.data;
+  }
+
+  for (const [key, value] of Object.entries(workingPayload)) {
+    if (key === 'sync_status') continue;
     if (allowedColumns.includes(key)) {
       clean[key] = value;
+    } else if (value !== null && value !== undefined && value !== '') {
+      discarded.push(key);
     }
   }
 
-  delete clean.sync_status;
+  if (discarded.length > 0) {
+    console.warn(`[sanitizePayload Warning] ${table} descartou campos locais ausentes no PostgreSQL:`, discarded.join(', '));
+  }
+
   return clean;
 }
 

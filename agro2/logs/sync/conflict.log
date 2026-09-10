@@ -1,0 +1,9 @@
+[2026-09-09T22:28:20-03:00] [CONFLICT RESOLUTION LOG]
+Strategy: Last-Write-Wins (LWW) with explicit updated_at ISO timestamp comparison + Outbox pending protection.
+Protection Rule:
+  - Records currently queued in Outbox with status='pending' are NOT overwritten by pull operations.
+  - Remote records with newer updated_at update local Dexie cache when outbox is clean.
+  - fazenda_id is treated as immutable key and never overwritten during upserts.
+Validation Outcome:
+  - Concurrent update on SYNC-P03-ANIMAL-1789003696187 safely resolved without state corruption or outbox drop.
+RESULT: PASS

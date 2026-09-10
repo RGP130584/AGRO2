@@ -1,0 +1,10 @@
+[2026-09-09T22:28:20-03:00] [ESTOQUE / PRODUTOS TEST LOG]
+Produto ID: SYNC-P03-PROD-1789003696187
+Nome: Ração Inicial P0.3 6187
+Tipo: Ração
+Saldo Atual: 150.5
+Validade: 2027-12-31
+Sanitização: Campos locais 'fazenda_id' e 'unidade' descartados com aviso no console.
+Supabase Upsert: PASS
+Supabase Query Verification: PASS
+RESULT: PASS

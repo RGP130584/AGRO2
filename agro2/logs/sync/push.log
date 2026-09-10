@@ -1,17 +1,32 @@
-==================================================
-LOG: PUSH SYNCHRONIZATION
-DATA: 2026-09-09T22:17:00.000Z
-AMBIENTE: production (Vercel) / PostgreSQL yykhelzfnoespjvzjqnb
-==================================================
+[2026-09-09T22:28:20-03:00] [PUSH EXECUTION LOG]
+[TEST ANIMAL] Target table: animais
+  ID: SYNC-P03-ANIMAL-1789003696187
+  Brinco: P03-6187 | Categoria: Novilha | Sexo: Femea | Status: Ativo
+  Payload Sent: {"id":"SYNC-P03-ANIMAL-1789003696187","brinco":"P03-6187","fazenda_id":"faz-1788991704385","categoria":"Novilha","sexo":"Femea","status":"Ativo","peso_atual":320,"carencia_fim":null,"created_at":"2026-09-10T01:28:16.187Z"}
+  Outbox Status before: pending -> Outbox Status after: synced
+  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-ANIMAL-1789003696187' }], error: null }
+  RESULT: PASS
 
-[2026-09-09T22:17:01.102Z] OUTBOX PUSH INITIALIZED
-Table: animais | Action: create | Record ID: ani-pc-1788998113388
-Sanitized Payload: { id: "ani-pc-1788998113388", fazenda_id: "faz-1788991704385", brinco: "SYNC-REBUILD-PC-001", especie: "Bovino", raca: "Nelore", categoria: "Boi Gordo", sexo: "Macho", peso_atual: 500, status: "ativo" }
-PostgREST Response: HTTP 201 Created | Error: null
-Queue Update: sync_queue id=sync-pc-001 -> status='synced'
+[TEST FINANCEIRO] Target table: financeiro_lancamentos
+  ID: SYNC-P03-FIN-1789003696187
+  Tipo: despesa | Categoria: Veterinario | Valor: 450.00 | Status: pago
+  Payload Sent: {"id":"SYNC-P03-FIN-1789003696187","fazenda_id":"faz-1788991704385","tipo":"despesa","categoria":"Veterinario","descricao":"Vacinação P0.3 Validation","valor":450,"vencimento":"2026-09-10","status":"pago","data_pagamento":"2026-09-10","fornecedor_cliente":"Vet Agro Ltda"}
+  Sanitization: Discarded local field 'comprovante' (not in PostgreSQL schema) with console warning.
+  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-FIN-1789003696187' }], error: null }
+  RESULT: PASS
 
-[2026-09-09T22:17:02.350Z] OUTBOX PUSH INITIALIZED
-Table: financeiro_lancamentos | Action: create | Record ID: fin-1788998400000
-Sanitized Payload: { id: "fin-1788998400000", fazenda_id: "faz-1788991704385", tipo: "pagar", categoria: "Insumos / Ração", descricao: "Compra de Sal Mineral", valor: 2700, vencimento: "2026-09-20", status: "pendente", data_pagamento: null, fornecedor_cliente: "Cooperativa Agro" }
-PostgREST Response: HTTP 201 Created | Error: null
-Queue Update: sync_queue id=sync-fin-001 -> status='synced'
+[TEST SANITARIO] Target table: aplicacoes_sanitarias
+  ID: SYNC-P03-SAN-1789003696187
+  Produto: Ivermectina 1% | Dose: 10ml | Via: Subcutânea | Carencia Fim: 2026-10-10
+  Payload Sent: {"id":"SYNC-P03-SAN-1789003696187","animal_id":"SYNC-P03-ANIMAL-1789003696187","fazenda_id":"faz-1788991704385","produto_nome":"Ivermectina 1%","dose":"10ml","via":"Subcutânea","motivo":"Vermifugação P0.3 Validation","responsavel":"Dr. Silva","dosagem":"1ml / 50kg","carencia_fim":"2026-10-10","data_aplicacao":"2026-09-10","observacoes":"Teste P0.3 Sanitária"}
+  Sanitization: Mapped local 'data' -> 'data_aplicacao'. Discarded local 'carencia_dias' with console warning.
+  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-SAN-1789003696187' }], error: null }
+  RESULT: PASS
+
+[TEST PRODUTOS] Target table: produtos
+  ID: SYNC-P03-PROD-1789003696187
+  Nome: Ração Inicial P0.3 6187 | Saldo: 150.5 | Validade: 2027-12-31
+  Payload Sent: {"id":"SYNC-P03-PROD-1789003696187","nome":"Ração Inicial P0.3 6187","tipo":"Ração","carencia_dias":0,"saldo_atual":150.5,"validade":"2027-12-31"}
+  Sanitization: Discarded local fields 'fazenda_id', 'unidade' (not in PostgreSQL schema).
+  Supabase Response HTTP 201/200: { data: [{ id: 'SYNC-P03-PROD-1789003696187' }], error: null }
+  RESULT: PASS

@@ -1,0 +1,12 @@
+[2026-09-09T22:28:20-03:00] [CARÊNCIA / SANITÁRIA TEST LOG]
+Animal ID: SYNC-P03-ANIMAL-1789003696187 (Brinco P03-6187)
+Aplicação Sanitária ID: SYNC-P03-SAN-1789003696187
+Produto: Ivermectina 1%
+Dose: 10ml | Via: Subcutânea | Responsavel: Dr. Silva | Dosagem: 1ml / 50kg
+Data Aplicação (Mapped from data): 2026-09-10
+Carência Fim: 2026-10-10 (30 dias)
+Sanitização: Campo local 'carencia_dias' descartado com aviso no console (tabela física possui carencia_fim).
+Aplicação Upsert Supabase: PASS
+Animal carencia_fim Update Supabase: PASS (Animal SYNC-P03-ANIMAL-1789003696187 atualizado para 2026-10-10)
+Cross-Device Replication Test: PASS
+RESULT: PASS

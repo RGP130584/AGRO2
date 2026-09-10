@@ -1,0 +1,15 @@
+[2026-09-09T22:28:20-03:00] [FINANCEIRO TEST LOG]
+Test Record ID: SYNC-P03-FIN-1789003696187
+Fazenda ID: faz-1788991704385
+Tipo: despesa
+Categoria: Veterinario
+Descrição: Vacinação P0.3 Validation
+Valor: R$ 450,00
+Vencimento (Mapped from data): 2026-09-10
+Status: pago
+Data Pagamento: 2026-09-10
+Fornecedor/Cliente: Vet Agro Ltda
+Sanitização: Campo local 'comprovante' descartado com aviso (não existe na tabela física do PostgreSQL).
+Supabase Upsert: PASS
+Supabase Query Check: PASS (id='SYNC-P03-FIN-1789003696187' retornado com valor=450)
+RESULT: PASS
