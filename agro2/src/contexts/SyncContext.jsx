@@ -112,10 +112,14 @@ export function SyncProvider({ children }) {
 
       // 1. Sincronização com Supabase (Nuvem compartilhada entre Celular e PC)
       try {
-        const { pushSyncToSupabase, pullSyncFromSupabase, subscribeToRealtimeSync } = await import('../lib/supabaseSync.js');
+        const { pushSyncToSupabase, pullSyncFromSupabase, resetLocalOperationalDataIfServerIsEmpty, subscribeToRealtimeSync } = await import('../lib/supabaseSync.js');
         subscribeToRealtimeSync();
-        await pushSyncToSupabase();
+        // Reset local se o servidor estiver operacionalmente vazio (Impede ressurreição de dados antigos)
+        await resetLocalOperationalDataIfServerIsEmpty();
+        // Executa Pull para receber dados do servidor
         await pullSyncFromSupabase();
+        // Executa Push para enviar alterações pendentes
+        await pushSyncToSupabase();
       } catch (sbErr) {
         console.warn('[Sync Supabase Exception]:', sbErr.message);
         setSyncError(sbErr.message);

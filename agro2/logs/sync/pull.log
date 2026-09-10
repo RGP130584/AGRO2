@@ -1,23 +1,23 @@
-[2026-09-09T22:28:20-03:00] [PULL EXECUTION LOG]
-[QUERY VERIFICATION] Table: animais
-  Filter: eq(id, 'SYNC-P03-ANIMAL-1789003696187')
-  Fetched Record: {
-    "id": "SYNC-P03-ANIMAL-1789003696187",
-    "brinco": "P03-6187",
-    "fazenda_id": "faz-1788991704385",
-    "categoria": "Novilha",
-    "sexo": "Femea",
-    "status": "Ativo",
-    "peso_atual": 320,
-    "carencia_fim": "2026-10-10",
-    "created_at": "2026-09-10T01:28:16.187Z",
-    "updated_at": "2026-09-10T01:28:20.450Z"
-  }
-  Dexie Upsert Status: SUCCESS (Local IndexedDB updated smoothly)
-  Fazenda ID Preservation Check: PASS (faz-1788991704385 retained across all operations)
-  RESULT: PASS
-
-[PULL BULK SYNC] Target tables: [animais, lotes, pesagens, ocorrencias_sanitarias, aplicacoes_sanitarias, fornecimentos_dieta, produtos, financeiro_lancamentos]
-  Strategy: Incremental pull using updated_at / created_at timestamp filters.
-  No full overwrite of offline outbox pending records.
-  RESULT: PASS
+[2026-09-09T23:06:15-03:00] [LOCAL RESET LOG - P0.5]
+[LOCAL RESET CHECK] Verificando 12 tabelas operacionais no Supabase (head count query)...
+  fazendas: 0 | piquetes: 0 | lotes: 0 | animais: 0
+  produtos: 0 | aplicacoes_sanitarias: 0 | ocorrencias_sanitarias: 0
+  dietas: 0 | fornecimentos_dieta: 0 | pesagens: 0
+  estoque_movimentos: 0 | financeiro_lancamentos: 0
+[LOCAL RESET] Supabase operacional vazio — iniciando limpeza do IndexedDB
+  entidade: fazendas registros removidos: OK
+  entidade: piquetes registros removidos: OK
+  entidade: lotes registros removidos: OK
+  entidade: animais registros removidos: OK
+  entidade: produtos registros removidos: OK
+  entidade: aplicacoes_sanitarias registros removidos: OK
+  entidade: ocorrencias_sanitarias registros removidos: OK
+  entidade: dietas registros removidos: OK
+  entidade: fornecimentos_dieta registros removidos: OK
+  entidade: pesagens registros removidos: OK
+  entidade: estoque_movimentos registros removidos: OK
+  entidade: financeiro_lancamentos registros removidos: OK
+[LOCAL RESET] sync_queue limpa
+[LOCAL RESET] usuarios: 2 mantidos intactos (Não resetado)
+[LOCAL RESET] CONCLUÍDO
+RESULT: PASS

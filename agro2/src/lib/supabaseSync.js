@@ -294,8 +294,79 @@ export async function pushSyncToSupabase() {
   }
 }
 
+export const OPERATIONAL_TABLES = [
+  'fazendas',
+  'piquetes',
+  'lotes',
+  'animais',
+  'produtos',
+  'aplicacoes_sanitarias',
+  'ocorrencias_sanitarias',
+  'dietas',
+  'fornecimentos_dieta',
+  'pesagens',
+  'estoque_movimentos',
+  'financeiro_lancamentos'
+];
+
+/**
+  * Verifica se o Supabase operacional está completamente vazio.
+  * Se todas as 12 tabelas operacionais estiverem vazias no servidor, limpa o IndexedDB local e a sync_queue
+  * PRESERVANDO a tabela usuarios intacta.
+  */
+export async function resetLocalOperationalDataIfServerIsEmpty() {
+  try {
+    let allOperationalTablesEmpty = true;
+
+    for (const tableName of OPERATIONAL_TABLES) {
+      const { count, error } = await supabase
+        .from(tableName)
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        console.warn(`[LOCAL RESET CHECK] Erro ao verificar contagem no servidor (${tableName}):`, error.message);
+        return false;
+      }
+
+      if (count && count > 0) {
+        allOperationalTablesEmpty = false;
+        break;
+      }
+    }
+
+    if (!allOperationalTablesEmpty) {
+      return false;
+    }
+
+    console.log('[LOCAL RESET] Supabase operacional vazio — iniciando limpeza do IndexedDB');
+
+    for (const tableName of OPERATIONAL_TABLES) {
+      if (db[tableName]) {
+        const removedCount = await db[tableName].count();
+        await db[tableName].clear();
+        console.log(`[LOCAL RESET] entidade: ${tableName} registros removidos: ${removedCount}`);
+      }
+    }
+
+    if (db.sync_queue) {
+      await db.sync_queue.clear();
+      console.log('[LOCAL RESET] sync_queue limpa');
+    }
+
+    console.log('[LOCAL RESET] CONCLUÍDO');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
+    }
+    return true;
+  } catch (err) {
+    console.error('[LOCAL RESET ERROR]:', err);
+    return false;
+  }
+}
+
 /**
  * Puxa todos os dados do Supabase para o IndexedDB local sem destruir alterações locais pendentes
+ * Trata exclusões remotas removendo itens 'synced' locais que não existem mais no servidor
  * Preserva o fazenda_id original remoto retornado do Supabase
  */
 export async function pullSyncFromSupabase() {
@@ -309,7 +380,10 @@ export async function pullSyncFromSupabase() {
         continue;
       }
 
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
+        const remoteIds = new Set(data.map((item) => item.id));
+
+        // 1. Processa inclusões e atualizações vindas do Supabase
         for (const item of data) {
           if (item && item.id && db[tableName]) {
             // Preserva alteração local pendente sem sobrescrever
@@ -335,13 +409,26 @@ export async function pullSyncFromSupabase() {
             hasChanges = true;
           }
         }
+
+        // 2. Trata exclusões remotas: se o item local estava 'synced' e não existe mais no servidor, remove localmente
+        if (db[tableName] && tableName !== 'usuarios') {
+          const localItems = await db[tableName].toArray();
+          for (const localItem of localItems) {
+            if (localItem && localItem.id && !remoteIds.has(localItem.id)) {
+              if (localItem.sync_status === 'synced') {
+                await db[tableName].delete(localItem.id);
+                hasChanges = true;
+              }
+            }
+          }
+        }
       }
     } catch (tableErr) {
       console.warn(`[Supabase Pull Exception] ${tableName}:`, tableErr.message);
     }
   }
 
-  if (hasChanges) {
+  if (hasChanges && typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('agro2_sync_updated'));
   }
 }

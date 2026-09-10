@@ -1,4 +1,4 @@
-# AGRO2 — AUDITORIA P0.4: CORREÇÃO DEFINITIVA DO PUSH FINANCEIRO
+# AGRO2 — AUDITORIA P0.5: RESET LOCAL APÓS LIMPEZA DO SUPABASE
 
 **Status Geral:** PASS  
 **Data da Execução:** 2026-09-09  
@@ -6,22 +6,36 @@
 
 ---
 
-## 1. RESUMO DOS RESULTADOS DE TESTE
+## 1. RESUMO DA OPERAÇÃO DE RESET E VERIFICAÇÃO
 
-| Lançamento | ID do Lançamento | ID da Outbox (`sync_queue`) | Fazenda ID | Valor | Status Supabase | Log de Referência | Status Final |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Recuperação R\$ 1.000.000** | `fin-million-1789005267279` | `sync-fin-million-1789005267279` | `faz-1788991704385` | R\$ 1.000.000,00 | `pago` | [`financeiro.log`](file:///e:/documentos/projetos/AGRO/agro2/logs/tests/financeiro.log) | **PASS** |
-| **Novo Lançamento Real** | `SYNC-P04-FIN-REAL-1789005267779` | `sync-p04-outbox-1789005267779` | `faz-1788991704385` | R\$ 7.500,50 | `pendente` | [`push.log`](file:///e:/documentos/projetos/AGRO/agro2/logs/sync/push.log) | **PASS** |
+| Entidade / Tabela | Contagem Supabase Remoto | Ação no IndexedDB Local | Ação na Outbox (`sync_queue`) | Status Final |
+| :--- | :--- | :--- | :--- | :--- |
+| **`usuarios`** | **2 registros** | **PRESERVADA (Não Limpa)** | N/A | **PRESERVADO** |
+| **`fazendas`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`piquetes`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`lotes`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`animais`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`produtos`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`aplicacoes_sanitarias`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`ocorrencias_sanitarias`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`dietas`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`fornecimentos_dieta`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`pesagens`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`estoque_movimentos`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`financeiro_lancamentos`** | 0 registros | Limpa / Resetada | Resetada | **PASS** |
+| **`sync_queue`** | N/A | `count = 0` (Totalmente ZERADA) | Resetada | **PASS** |
 
 ---
 
-## 2. MELHORIAS E HARDENING IMPLEMENTADOS (P0.4)
+## 2. GARANTIAS TÉCNICAS DA IMPLEMENTAÇÃO P0.5
 
-1. **Propagation em `queueSyncEvent()`**:
-   - As exceções no enfileiramento Dexie não são mais engolidas. Erros são propagados para os formulários de cadastro, impedindo falsos alertas de sucesso.
-2. **Ciclo de Re-tentativa para Erros (`OUTBOX RETRY`)**:
-   - Itens com status `'error'` entram automaticamente nas tentativas de retry do `pushSyncToSupabase()`, sem deleção precoce de eventos.
-3. **Confirmação Estrita do Supabase**:
-   - Uma operação só é marcada como `'synced'` após verificação explícita de `error === null`, `data.length > 0` e correspondência exata do ID do registro retornado.
-4. **Logs Estruturados**:
-   - Adicionados logs explícitos para todas as fases da outbox: `[FINANCEIRO CREATE]`, `[OUTBOX CREATE]`, `[OUTBOX PUSH]`, `[OUTBOX ERROR]`, `[OUTBOX RETRY]` e `[OUTBOX CONFIRMED]`.
+1. **`resetLocalOperationalDataIfServerIsEmpty()`**:
+   - Executa uma verificação atômica de contagem (`count: 'exact', head: true`) nas 12 tabelas operacionais do Supabase.
+   - SOMENTE se **TODAS as 12 tabelas operacionais estiverem zeradas**, executa o `clear()` local das 12 tabelas no IndexedDB e da `sync_queue`.
+   - A tabela `usuarios` é preservada integralmente no banco local e na nuvem.
+
+2. **Ordem Obrigatória de Sincronização**:
+   - `resetLocalOperationalDataIfServerIsEmpty()` roda **ANTES** de `pullSyncFromSupabase()` e **ANTES** de `pushSyncToSupabase()`, impedindo que a outbox local envie registros antigos de volta para o Supabase.
+
+3. **Propagação de Exclusões Remotas em `pullSyncFromSupabase()`**:
+   - Quando o Supabase retorna um conjunto de dados para uma tabela (ex: array vazio `[]`), o pull local verifica os itens com `sync_status === 'synced'` e remove do IndexedDB aqueles que não existem mais no servidor.
